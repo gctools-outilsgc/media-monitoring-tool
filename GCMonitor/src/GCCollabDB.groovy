@@ -18,24 +18,10 @@ public class GCCollabDB {
 	private String dbLocation = "jdbc:sqlite:/C:/Users/trinet.tbs-004409/eclipse-workspace/GCMonitor/"
 	private static String dbDriver = "org.sqlite.JDBC"
 	
-	public GCCollabDB(String s) {
-		dbLocation += s
+	public GCCollabDB(String dbName) {
+		dbLocation += dbName
 		dbInstance = Sql.newInstance(dbLocation, dbDriver);
-	}	
-	
-//	public void insertGroup(int groupID, String name, String link){
-//		dbInstance.execute("insert into Groups(groupID, link, name) values(?, ?, ?)", [groupID, link, name])
-//	}
-//	
-//	public void insertForum(int forumID,int ownerID, String link, int score, String description, String title, String type, Long timestamp){
-//		dbInstance.execute("insert into Forum(forumID, ownerID, link, score, description, title, type, timestamp) values(?, ?, ?, ?, ?, ?, ?, ?)", [forumID, ownerID, link, score, description, title, type, timestamp])
-//	}
-//	
-//	
-//	public void insertMessage(int messageID,String messageText, String link, int forumID, int score, String title, Long timestamp){
-//		dbInstance.execute("insert into Messages(messageID, message, link, forumID, score, title, timestamp) values(?, ?, ?, ?, ?, ?, ?)", [messageID, messageText, link, forumID, score, title, timestamp])
-//	}
-//	
+	}		
 
 	public void insertGroup(Group g){
 		if(!hasGroup(g)) {
@@ -155,6 +141,44 @@ public class GCCollabDB {
 		return forums;
 	}
 		
+	public Forum getForum(int forumID) {
+		def f
+		
+		dbInstance.rows("SELECT * FROM forum WHERE forumID='" + forumID + "'").each {
+			def ownerID = it.getProperty("ownerID");
+			def link = new URL(it.getProperty("link"));
+			def score = it.getProperty("score");
+			def title = it.getProperty("title");
+			def description = it.getProperty("description");
+			def type = it.getProperty("type");
+			def timestamp = it.getProperty("timestamp");
+			def owner = getOwner(ownerID);
+			
+			if(type == "Discussion") {
+				f = new Discussion(forumID,owner,link,description,title,timestamp)
+			}
+			
+			if(type == "Blog") {
+				f = new Blog(forumID, owner, link, description, title, timestamp)
+			}
+			
+			if(type == "File") {
+				f = new Files(forumID, owner, link, description, title, timestamp)
+			}
+			
+			if(type == "Document") {
+				f = new Document(forumID, owner, link, description, title, timestamp)
+			}
+			
+			if(type == "Event") {
+				f = new Event(forumID, owner, link, description, title, timestamp)
+			}
+			
+		}
+		
+		return f
+	}
+		
 	//Used to recreated the Group class
 	public Group getOwner(int ownerID) {
 		def g
@@ -230,9 +254,24 @@ public class GCCollabDB {
 		return result
 	}
 	
-
-	//get all messages for a specific forum (objects)
-	// Return them in Sets.
+	public void updateHeusticScore(String key, int value) {
+		dbInstance.execute("UPDATE HeuristicValues set Value ='" + value + "' WHERE name ='" + key +"'")
+	}
 	
-	// getLargestGUID function (for wirepost only)	
+	//Add cases for strings with apostrophies
+	public void addHeusticKey(String key, int value) {
+		println("Getting in here")
+		
+		if(!hasKey(key)) {
+			dbInstance.execute("INSERT INTO HeuristicValues(name,value) values(?,?)", [key,value])
+		}
+	}
+	
+	public boolean hasKey(String key) {		
+		return dbInstance.rows("SELECT name FROM HeuristicValues WHERE name='" + key + "'").size() > 0
+	}
+	
+	public void deleteKey(String key) {
+		dbInstance.execute("DELETE FROM HeuristicValues WHERE name='" + key +"'")
+	}
 }

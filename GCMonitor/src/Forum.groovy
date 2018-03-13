@@ -286,7 +286,7 @@ public class Forum {
 	public void compareForums(Forum f) {
 		
 		//Check if the description has changed
-		if(!f.getDescription().equals(description)) {			
+		if(!f.getDescription().equals(description) && !f.getDescription() == null && !description == null) {			
 			println("Forum #" + GUID + " changed, because the description is different")
 			f.notifyOfChange()
 		}
