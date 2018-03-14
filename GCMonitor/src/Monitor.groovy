@@ -1,6 +1,7 @@
 /*
  * 
  * Main function of the script
+ * This is a temporary version, to be modified once API issue is resolved
  * 
  * How the script runs:
  * 	- Get a list of Groups and Forums, with their replies from the Database
@@ -12,10 +13,10 @@
  * 	- Generate a report
  * 
  * Things to add or change:
+ * 	- Current live version is being emulated with a secondary database
  * 	- Find a better way to filter results of live list by data and time
  * 	- Automate group detection for possible monitoring
  *  - Automate report delivery
- * 
  */
 
 import java.util.ArrayList
@@ -111,10 +112,53 @@ public long getTimestamp(String s) {
 	return date.getTime()
 }
 
+
+public void updateGroupList() {
+	
+	def parser = new JsonSlurper()
+	def post
+	def postRC
+	def responseString
+	def response
+	def url
+	def query;
+	def value;
+	def g;
+	Set<Map.Entry<String,Integer>> entrySet = heuristicValues.entrySet();
+	
+	entrySet.each { entry ->
+		query = entry.getKey().replaceAll(" ", "%20");
+		value = entry.getValue();
+		if (value >= 10) {
+			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
+			
+			post = url.openConnection()
+			post.requestMethod = 'POST'
+			post.setDoOutput(true)
+			postRC = post.getResponseCode()
+			if (postRC == 200) {
+				responseString = post.getInputStream().getText()
+				response = parser.parseText(responseString)
+				
+				for(def i = 0; i<response.result.size(); i++) {
+					if (!dbStatic.hasGroup(response.result.get(i).guid)) {
+						g = new Group(response.result.get(i).guid, response.result.get(i).name, new URL(response.result.get(i).url));
+						println("Adding new Group: " + g.getID());
+						dbStatic.insertGroup(g);
+					}
+				}
+			} else {
+					println("This is error code: " + postRC)
+			}
+		}	
+	}
+		
+}
+
 public ArrayList<Forum> getForums() {
 	def list = new ArrayList<Forum>()
 	def cmd = new ArrayList<String>()
-	
+
 	def parser = new JsonSlurper()
 	def id 
 	Forum f
@@ -143,11 +187,10 @@ public ArrayList<Forum> getForums() {
 			if(postRC == 200) {
 				
 				responseString = post.getInputStream().getText()
-				response = parser.parseText(responseString)							
-								
+				response = parser.parseText(responseString)
+											
 				if(s.equals("discussion")) {
 					for(def i = 0; i<response.result.size();i++) {
-						//println("Creating a discussion")
 						f = new Discussion(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
 						getMessages(f,response.result.get(i).replies)
 						list.add(f)
@@ -156,16 +199,13 @@ public ArrayList<Forum> getForums() {
 								
 				if(s.equals("blog")) {
 					for(def i = 0; i<response.result.size();i++) {
-						//println("Creating a blog from")
 						f = new Blog(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
-						getMessages(f,response.result.get(i).replies)
 						list.add(f)
 					}
 				}
 				
 				if(s.equals("event")) {
 					for(def i = 0; i<response.result.size();i++) {
-						//println("Creating an event from")
 						f = new Event(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
 						list.add(f)
 					}
@@ -277,20 +317,18 @@ public UserInfo getUserInfo() {
 
 // -------------------------------------------------- BEGINING OF THE SCRIPT --------------------------------------------
 
-def dbStatic = new GCCollabDB("gc.db") //Database
+ dbStatic = new GCCollabDB("gc.db") //Database
 user = getUserInfo() //Global variable holding user info
 heuristicValues = dbStatic.setScore() //Heuristic values for keywords from the database
 listGroups = dbStatic.getGroups() //List of all groups from the database
 
 def largestWirepostID = dbStatic.getLargestWirepostGUID() //Change value into a variable to be determined from largest wirepost ID in the DB
 
-def dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-def date = dateFormat.format(new Date())
-
-def testTimeStamp = dateFormat.format(1510923874000)
-println("This is testTimeStamp: " + testTimeStamp)
+Date date = new Date()
 
 println("This is date: " + date)
+
+updateGroupList();
 
 println("Getting all forum info from DB")
 
@@ -301,9 +339,6 @@ println("Getting all forums from API")
 def liveList = getForums() //dbLive.getAllForums()//List of all forums from the API requests
 def wireposts = getWireposts(largestWirepostID)
 liveList.addAll(wireposts)
-
-println("Found " + liveList.size() + " elements to compare")
-println(wireposts.size() + " elements are wireposts")
 
 //Call this loop once all objects are created from the API call
 
@@ -368,13 +403,8 @@ for(Forum f in liveList) {
 			score = 0
 		}		
 		
-		//Null checks
 		if(f.getDescription() == null) {
 			f.setDescription("")
-		}
-		
-		if(f.getTitle() == null) {
-			f.setTitle("")
 		}
 		
 		for(String s in getSentences(f.getDescription())) {
@@ -412,7 +442,6 @@ println("Creating list for report")
 //For report only
 def n = new ArrayList<Forum>()//List of new forums
 def u = new ArrayList<Forum>()//List of updated forums
-
 for(Forum f in liveList) {
 	if(f.isNew()) {
 		n.add(f)
@@ -422,9 +451,6 @@ for(Forum f in liveList) {
 		u.add(f)
 	}
 }
-
-println("Found " + n.size() + " new forums")
-println("Found " + u.size() + " changes to existing forums")
 
 //Sanitizing for DB
 for(Forum f in liveList) {
@@ -441,7 +467,6 @@ println("Updating DB")
 //Perform updates on DB
 for (Forum f in liveList) {
 	
-	//Replies to wirepost are currently saved as their own wirepost and not replies to the original wirepost
 	if (f.getClass().equals(Wirepost.class)) {
 		dbStatic.insertForum(f, "Wirepost")
 	}
@@ -469,7 +494,6 @@ for (Forum f in liveList) {
 			}
 		}
 		
-		//TODO Test Files and Documents from API later
 		if (f.getClass().equals(Files.class)) {
 			dbStatic.insertForum(f, "Files")
 			for( Reply r in f.getMessages()) {
@@ -495,13 +519,15 @@ for (Forum f in liveList) {
 			} 
 		}
 		
-		if(!f.getDeletedMessages().isEmpty()) {			
+		if(!f.getDeletedMessages().isEmpty()) {
+			
 			for(Reply r in f.getDeletedMessages()) {
 				dbStatic.deleteMessage(r)
 			}
 		}
 	}	
 }
+
 
 //Close the databases
 dbStatic.close()
