@@ -108,7 +108,8 @@ public class Reply {
 	//Clean up the message, make it readable by the script/person
 	public void sanitizeMessage() {
 		if (message && message.contains("\"en\":\"")) {
-			message = message.substring(message.indexOf("\"en\":\"")+6, message.indexOf("\"fr\":\"")-3).replaceAll("'", "\"");
+			def messageJson = parser.parseText(message);
+			message = messageJson.en;
 		}
 		def dom = Jsoup.parse(message); 
 		

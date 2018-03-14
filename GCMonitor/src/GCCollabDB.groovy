@@ -15,7 +15,7 @@ public class GCCollabDB {
 	
 	private Sql dbInstance;
 	
-	private String dbLocation = "jdbc:sqlite:/C:/Users/trinet.tbs-004409/eclipse-workspace/GCMonitor/"
+	private String dbLocation = "jdbc:sqlite:/C:/Users/trinet.tbs-rl-005182/eclipse-workspace/gcCollabMonitor/"
 	private static String dbDriver = "org.sqlite.JDBC"
 	
 	public GCCollabDB(String dbName) {
@@ -55,6 +55,10 @@ public class GCCollabDB {
 		
 	public boolean hasGroup(Group g) {
 		int groupID = g.getID();
+		return dbInstance.rows("select groupID from groups where groupID='"+ groupID +"'").size() > 0;
+	}
+	
+	public boolean hasGroup(int groupID) {
 		return dbInstance.rows("select groupID from groups where groupID='"+ groupID +"'").size() > 0;
 	}
 		

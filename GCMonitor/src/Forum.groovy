@@ -188,14 +188,15 @@ public class Forum {
 	}
 	
 	public void sanitizeDescription() {
-		
+		def parser = new JsonSlurper()
 		if(description == null) {
 			return
 		}
 		
 		if (description) {
 			if (description.contains("\"en\":\"")) {				
- 
+				def descriptionJson = parser.parseText(description);
+				description = descriptionJson.en;
 			}
 			def dom = Jsoup.parse(description);
 			description = dom.text();		
