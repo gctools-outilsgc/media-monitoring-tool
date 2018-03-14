@@ -15,7 +15,7 @@ public class GCCollabDB {
 	
 	private Sql dbInstance;
 	
-	private String dbLocation = "jdbc:sqlite:/C:/Users/trinet.tbs-rl-005182/eclipse-workspace/gcCollabMonitor/"
+	private String dbLocation = "jdbc:sqlite:/"+ new File("").absolutePath.replace("\\", "/") + "/";
 	private static String dbDriver = "org.sqlite.JDBC"
 	
 	public GCCollabDB(String dbName) {

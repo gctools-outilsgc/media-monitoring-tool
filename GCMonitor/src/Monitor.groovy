@@ -316,8 +316,7 @@ public UserInfo getUserInfo() {
 }
 
 // -------------------------------------------------- BEGINING OF THE SCRIPT --------------------------------------------
-
- dbStatic = new GCCollabDB("gc.db") //Database
+dbStatic = new GCCollabDB("gc.db") //Database
 user = getUserInfo() //Global variable holding user info
 heuristicValues = dbStatic.setScore() //Heuristic values for keywords from the database
 listGroups = dbStatic.getGroups() //List of all groups from the database
