@@ -16,6 +16,7 @@
 
 import java.util.ArrayList
 import org.jsoup.Jsoup;
+import groovy.json.JsonSlurper
 import java.net.URL
 
 /*
@@ -158,13 +159,16 @@ public class Forum {
 	}
 	
 	public void sanitizeTitle() {
+		def parser = new JsonSlurper()
 		if(title == null) {
 			return
 		}
 		
 		if (title) {
 			if(title.contains("\"en\":\"")) {
-				title = title.substring(title.indexOf("\"en\":\"")+6, title.indexOf("\"fr\":\"")-3);
+				def titleJson = parser.parseText(title);
+				title = titleJson.en;
+				
 			}
 		}
 		def dom = Jsoup.parse(title)	
@@ -184,14 +188,15 @@ public class Forum {
 	}
 	
 	public void sanitizeDescription() {
-		
+		def parser = new JsonSlurper()
 		if(description == null) {
 			return
 		}
 		
 		if (description) {
 			if (description.contains("\"en\":\"")) {				
- 
+				def descriptionJson = parser.parseText(description);
+				description = descriptionJson.en;
 			}
 			def dom = Jsoup.parse(description);
 			description = dom.text();		
@@ -286,7 +291,7 @@ public class Forum {
 	public void compareForums(Forum f) {
 		
 		//Check if the description has changed
-		if(!f.getDescription().equals(description) && !f.getDescription() == null && !description == null) {			
+		if(!f.getDescription().equals(description)) {			
 			println("Forum #" + GUID + " changed, because the description is different")
 			f.notifyOfChange()
 		}
