@@ -30,10 +30,16 @@ public class GCCollabDB {
 	}
 	
 	public void insertForum(Forum f, String type){
-		dbInstance.execute("insert into Forum(forumID, ownerID, link, score, description, title, type, timestamp) values(?, ?, ?, ?, ?, ?, ?, ?)", [f.getID(), f.getOwner().getID(), f.getLink().toString(), f.getScore(), f.getDescription(), f.getTitle(), type, f.getTimestamp()])
+		if(!hasForum(f)) {
+			dbInstance.execute("insert into Forum(forumID, ownerID, link, score, description, title, type, timestamp) values(?, ?, ?, ?, ?, ?, ?, ?)", [f.getID(), f.getOwner().getID(), f.getLink().toString(), f.getScore(), f.getDescription(), f.getTitle(), type, f.getTimestamp()])
+		}
 				
 		if(!f.getClass().equals(Wirepost.class)) {
 			insertGroup(f.getOwner())		
+		}
+		
+		for(Reply r in f.getMessages()) {
+			insertMessage(r)
 		}
 	}
 	
@@ -82,6 +88,16 @@ public class GCCollabDB {
 		def forumID = f.getID();	
 		
 		dbInstance.execute("update forum set description ='"+ description +"', timestamp='"+ timestamp +"', score='"+ score +"', title='"+ title  +"' where forumID='"+ forumID +"'");
+		
+		for(Reply r in f.getMessages()) {
+			if(r.hasChanged()) {
+				updateMessage(r)
+			}
+			
+			if(r.isNew()) {
+				insertMessage(r)
+			}
+		}
 	}
 		
 	public void updateMessage(Reply r) {
@@ -140,7 +156,8 @@ public class GCCollabDB {
 		}
 		return forums;
 	}
-		
+
+	//Get forum by ID		
 	public Forum getForum(int forumID) {
 		def f
 		
@@ -177,6 +194,24 @@ public class GCCollabDB {
 		}
 		
 		return f
+	}
+	
+	//Get message by ID
+	public Reply getMessage(int messageID) {
+		def r
+		
+		dbInstance.rows("SELECT * FROM message WHERE messageID='" + messageID + "'").each {
+			def forum = getForum(it.getProperty("forumID"))
+			def message = it.getProperty("Message")
+			def link = new URL(it.getProperty("Link"))
+			def score = it.getProperty("Score")
+			def timestamp = it.getProperty("timestamp")
+			
+			r = new Reply(forum,messageID,message,link,timestamp)
+			r.setScore(score)
+		}
+		
+		return r
 	}
 		
 	//Used to recreated the Group class
@@ -259,9 +294,7 @@ public class GCCollabDB {
 	}
 	
 	//Add cases for strings with apostrophies
-	public void addHeusticKey(String key, int value) {
-		println("Getting in here")
-		
+	public void addHeusticKey(String key, int value) {		
 		if(!hasKey(key)) {
 			dbInstance.execute("INSERT INTO HeuristicValues(name,value) values(?,?)", [key,value])
 		}

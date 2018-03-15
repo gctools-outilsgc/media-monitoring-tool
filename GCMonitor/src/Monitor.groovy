@@ -147,26 +147,48 @@ public ArrayList<Forum> getForums() {
 								
 				if(s.equals("discussion")) {
 					for(def i = 0; i<response.result.size();i++) {
-						//println("Creating a discussion")
 						f = new Discussion(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
+						
+						if(getTimestamp(response.result.get(i).time_created) > timestamp) {
+							f.notifyNew()
+						} else if(getTimestamp(response.result.get(i).time_updated) > timestamp) {
+							f.notifyOfChange()
+						}
+						
 						getMessages(f,response.result.get(i).replies)
+						
 						list.add(f)
 					}
 				}
 								
 				if(s.equals("blog")) {
 					for(def i = 0; i<response.result.size();i++) {
-						//println("Creating a blog from")
 						f = new Blog(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
+					
+						if(getTimestamp(response.result.get(i).time_created) > timestamp) {
+							f.notifyNew()
+						} else if(getTimestamp(response.result.get(i).time_updated) > timestamp) {
+							f.notifyOfChange()
+						}
+						
 						getMessages(f,response.result.get(i).replies)
+						
 						list.add(f)
 					}
 				}
 				
 				if(s.equals("event")) {
 					for(def i = 0; i<response.result.size();i++) {
-						//println("Creating an event from")
 						f = new Event(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
+															
+						if(getTimestamp(response.result.get(i).time_created) > timestamp) {
+							f.notifyNew()
+						} else if(getTimestamp(response.result.get(i).time_updated) > timestamp) {
+							f.notifyOfChange()
+						}
+						
+						getMessages(f,response.result.get(i).replies)
+						
 						list.add(f)
 					}
 				}
@@ -186,6 +208,14 @@ public void getMessages(Forum f, ArrayList<String> replies) {
 		for(def i=0;i<replies.size();i++) {
 			reply = new Reply(f,replies.get(i).guid, replies.get(i).description, new URL(replies.get(i).url),getTimestamp(replies.get(i).time_updated))	
 			f.addMessage(reply)
+								
+			if(getTimestamp(replies.get(i).time_created) > timestamp) {
+				f.notifyOfChange()
+				reply.notifyNew()
+			} else if(getTimestamp(replies.get(i).time_updated) > timestamp) {
+				f.notifyOfChange()
+				reply.notifyOfChange()
+			}
 		}
 	}
 }
@@ -203,7 +233,7 @@ public Wirepost findWirepost(HashSet<Wirepost> l, int i) {
 }
 
 //Returns a list of all wireposts
-public HashSet<Wirepost> getWireposts(int g) {
+public HashSet<Wirepost> getWireposts() {
 	def HashSet<Wirepost> wireposts = new HashSet<Wirepost>()
 	def wire
 	def post
@@ -227,7 +257,7 @@ public HashSet<Wirepost> getWireposts(int g) {
 			response = parser.parseText(responseString)
 						
 			for(def i=0;i<response.result.size();i++) {				
-				if(response.result.get(i).guid <= g) {
+				if(response.result.get(i).guid <= largestWirepostID) {
 					return wireposts
 				}
 				
@@ -275,22 +305,15 @@ public UserInfo getUserInfo() {
 	return user
 }
 
+
 // -------------------------------------------------- BEGINING OF THE SCRIPT --------------------------------------------
 
 def dbStatic = new GCCollabDB("gc.db") //Database
 user = getUserInfo() //Global variable holding user info
 heuristicValues = dbStatic.setScore() //Heuristic values for keywords from the database
 listGroups = dbStatic.getGroups() //List of all groups from the database
-
-def largestWirepostID = dbStatic.getLargestWirepostGUID() //Change value into a variable to be determined from largest wirepost ID in the DB
-
-def dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-def date = dateFormat.format(new Date())
-
-def testTimeStamp = dateFormat.format(1510923874000)
-println("This is testTimeStamp: " + testTimeStamp)
-
-println("This is date: " + date)
+timestamp = new Date().minus(1).getTime()//Returns yesterday
+largestWirepostID = dbStatic.getLargestWirepostGUID()
 
 println("Getting all forum info from DB")
 
@@ -299,7 +322,7 @@ def staticList = dbStatic.getAllForums() //List of all forums from the database
 println("Getting all forums from API")
 
 def liveList = getForums() //dbLive.getAllForums()//List of all forums from the API requests
-def wireposts = getWireposts(largestWirepostID)
+def wireposts = getWireposts()
 liveList.addAll(wireposts)
 
 println("Found " + liveList.size() + " elements to compare")
@@ -314,40 +337,6 @@ for(Forum f in liveList) {
 	f.sanitize()
 }
 
-println("Comparing versions")
-
-//Compare forums and find new ones
-for(Forum f in liveList) {
-	//New forum
-	if(!listContains(staticList,f)) {
-		f.isNew()
-	} else {
-		staticList.get(getIndex(f,staticList)).compareForums(f)
-	}
-}
-
-println("Listing new and changed forums")
-
-//For testing purposes only
-for(Forum f in liveList) {
-	if(f.isNew()) {
-		println("This forum is new: " + f.getID())
-	}
-	
-	if(f.hasChanged()) {
-		println("This forum changed: " + f.getID())
-		for(Reply r in f.getMessages()) {
-			
-			if(r.hasChanged()) {
-				println("This message # " + r.getID() + " changed")
-			}
-			
-			if(r.isNew()) {
-				println("This message # " + r.getID() + " is new")
-			}
-		}
-	}
-}
 
 println("(Re)calculation scores for forums")
 
@@ -450,50 +439,28 @@ for (Forum f in liveList) {
 		
 		if (f.getClass().equals(Discussion.class)) {
 			dbStatic.insertForum(f , "Discussion")
-			for (Reply r in f.getMessages()) {
-				dbStatic.insertMessage(r)
-			}
 		}
 		
 		if (f.getClass().equals(Blog.class)) {
 			dbStatic.insertForum(f, "Blog")
-			for( Reply r in f.getMessages()) {
-				dbStatic.insertMessage(r)
-			}
 		}
 		
 		if (f.getClass().equals(Event.class)) {
 			dbStatic.insertForum(f, "Event")
-			for( Reply r in f.getMessages()) {
-				dbStatic.insertMessage(r)
-			}
 		}
 		
 		//TODO Test Files and Documents from API later
 		if (f.getClass().equals(Files.class)) {
 			dbStatic.insertForum(f, "Files")
-			for( Reply r in f.getMessages()) {
-				dbStatic.insertMessage(r)
-			}
 		}
 		
 		if (f.getClass().equals(Document.class)) {
 			dbStatic.insertForum(f, "Document")
-			for( Reply r in f.getMessages()) {
-				dbStatic.insertMessage(r)
-			}
 		}				
 	}
 
 	if (f.hasChanged()) {
 		dbStatic.updateForum(f)	
-		for (Reply r in f.getMessages()) {
-			if(r.isNew()) {
-				dbStatic.insertMessage(r)
-			} else if (r.hasChanged()) {
-				dbStatic.updateMessage(r)
-			} 
-		}
 		
 		if(!f.getDeletedMessages().isEmpty()) {			
 			for(Reply r in f.getDeletedMessages()) {
