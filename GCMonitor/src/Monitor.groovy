@@ -5,7 +5,6 @@
  * How the script runs:
  * 	- Get a list of Groups and Forums, with their replies from the Database
  * 	- From the list of groups, query GCCollab for a live list of Forums for each group, with their replies
- * 	- Compare the list of forums from the database to a list compiled from the APIs
  * 	- Mark any new or changed forum, including replies to forums
  * 	- (Re)Calculate the score for each forum and message which was identified as new or having changed
  * 	- Update the database
@@ -197,7 +196,6 @@ public ArrayList<Forum> getForums() {
 						}
 
 						getMessages(f,response.result.get(i).replies)
-
 						list.add(f)
 					}
 				}
@@ -213,7 +211,6 @@ public ArrayList<Forum> getForums() {
 						}
 
 						getMessages(f,response.result.get(i).replies)
-
 						list.add(f)
 					}
 				}
@@ -229,7 +226,6 @@ public ArrayList<Forum> getForums() {
 						}
 
 						getMessages(f,response.result.get(i).replies)
-
 						list.add(f)
 					}
 				}
@@ -248,7 +244,6 @@ public void getMessages(Forum f, ArrayList<String> replies) {
 	if(replies != null) {
 		for(def i=0;i<replies.size();i++) {
 			reply = new Reply(f,replies.get(i).guid, replies.get(i).description, new URL(replies.get(i).url),getTimestamp(replies.get(i).time_updated))
-			f.addMessage(reply)
 
 			if(getTimestamp(replies.get(i).time_created) > timestamp) {
 				f.notifyOfChange()
@@ -257,23 +252,14 @@ public void getMessages(Forum f, ArrayList<String> replies) {
 				f.notifyOfChange()
 				reply.notifyOfChange()
 			}
+			
+			f.addMessage(reply)
 		}
 	}
-}
-
-//TODO After API access has been granted
-//Get all wireposts
-public Wirepost findWirepost(HashSet<Wirepost> l, int i) {
-	for(Wirepost w in l) {
-		if(w != null && w.getID() == i) {
-			return w
-		}
-	}
-
-	return null
 }
 
 //Returns a list of all wireposts
+//Gathers 25 wireposts at a time
 public HashSet<Wirepost> getWireposts() {
 	def HashSet<Wirepost> wireposts = new HashSet<Wirepost>()
 	def wire
@@ -302,8 +288,14 @@ public HashSet<Wirepost> getWireposts() {
 					return wireposts
 				}
 
+				println("This is guid: " + response.result.get(i).guid)
+				
 				wire = new Wirepost(response.result.get(i).guid, group, new URL(response.result.get(i).url),response.result.get(i).description,response.result.get(i).title,getTimestamp(response.result.get(i).time_created))
 				wireposts.add(wire)
+				
+				if(response.result.get(i).guid == 207) {
+					return wireposts
+				}
 			}
 		}
 
@@ -313,59 +305,54 @@ public HashSet<Wirepost> getWireposts() {
 	return wireposts
 }
 
-//Checks if a list contains a forum with a specific ID
-public boolean listContains(ArrayList<Forum> l, Forum forum) {
-	for(Forum f in l) {
-		if(f.getID()== forum.getID()) {
-			return true
-		}
-	}
-
-	return false
-}
-
-//Return the index of a forum in the list
-public int getIndex(Forum f, ArrayList<Forum> list) {
-
-	for(def i=0;i<list.size();i++){
-		if(list.get(i).getID() == f.getID()) {
-			return i
-		}
-	}
-
-	return -1
-}
-
+//Build user information from file
 public UserInfo getUserInfo() {
 	def br = new BufferedReader(new FileReader("userInfo.txt"))
 	def line = br.readLine()
 
 	String[] tokenize = line.split(",")
 	def user = new UserInfo(tokenize[0],tokenize[1])
+	
+	br.close()
 
 	return user
 }
 
-
 // -------------------------------------------------- BEGINING OF THE SCRIPT --------------------------------------------
+
 dbStatic = new GCCollabDB("gc.db") //Database
 user = getUserInfo() //Global variable holding user info
 heuristicValues = dbStatic.setScore() //Heuristic values for keywords from the database
-listGroups = dbStatic.getGroups() //List of all groups from the database
-timestamp = new Date().minus(1).getTime()//Returns yesterday
 largestWirepostID = dbStatic.getLargestWirepostGUID()
+
+if(!dbStatic.isEmpty()) {
+	timestamp = new Date().minus(1).getTime()//Returns this time yesterday
+} else {
+	timestamp = new Date(100,0,0).getTime()
+}
 
 updateGroupList();
 
-println("Getting all forum info from DB")
-
-def staticList = dbStatic.getAllForums() //List of all forums from the database
+listGroups = dbStatic.getGroups() //List of all groups from the database
 
 println("Getting all forums from API")
 
 def liveList = getForums() //List of all forums from the API requests
 def wireposts = getWireposts()
 liveList.addAll(wireposts)
+
+println("This is the number of  forums: " + (liveList.size() + wireposts.size()))
+println(wireposts.size() + " of them are wireposts")
+
+def count = 0
+
+for(Forum f in liveList) {
+	if(f.isNew() || f.hasChanged()) {
+		count++
+	}	
+}
+
+println("This is the number of new or updated forums: " + count)
 
 //Call this loop once all objects are created from the API call
 
@@ -445,27 +432,29 @@ for(Forum f in liveList) {
 	}
 }
 
-//Sanitizing for DB
-for(Forum f in liveList) {
-	f.setTitle(f.sanitizeForDB(f.getTitle()))
-	f.setDescription(f.sanitizeForDB(f.getDescription()))
-
-	for(Reply r in f.getMessages()) {
-		r.setMessage(f.sanitizeForDB(r.getMessage()))
-	}
-}
+////Sanitizing for DB
+//for(Forum f in liveList) {
+//	f.setTitle(f.sanitizeForDB(f.getTitle()))
+//	f.setDescription(f.sanitizeForDB(f.getDescription()))
+//
+//	for(Reply r in f.getMessages()) {
+//		r.setMessage(f.sanitizeForDB(r.getMessage()))
+//	}
+//}
 
 println("Updating DB")
 
-//Perform updates on DB
-for (Forum f in liveList) {
+for (Wirepost w in wireposts) {
+	dbStatic.insertForum(w, "Wirepost")
+}
 
+//Perform updates on DB
+for (Forum f in liveList) {	
 	if (f.getClass().equals(Wirepost.class)) {
 		dbStatic.insertForum(f, "Wirepost")
 	}
 
-	if(f.isNew()) {
-
+	if(f.isNew()) {	
 		if (f.getClass().equals(Discussion.class)) {
 			dbStatic.insertForum(f , "Discussion")
 		}
@@ -487,7 +476,7 @@ for (Forum f in liveList) {
 		}
 	}
 
-	if (f.hasChanged()) {
+	if (f.hasChanged()) {			
 		dbStatic.updateForum(f)
 
 		if(!f.getDeletedMessages().isEmpty()) {
@@ -499,10 +488,10 @@ for (Forum f in liveList) {
 	}
 }
 
-
 //Close the databases
 dbStatic.close()
 
+println("Producing report")
 //Produce report
 //def reporter = new ReportGenerator(n,u)
 //reporter.generateReport()

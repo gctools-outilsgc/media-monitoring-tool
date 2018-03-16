@@ -5,7 +5,7 @@
  * 
  */
 
-import groovy.sql.Sql;
+import groovy.sql.Sql
 
 import java.net.URL
 import java.sql.ResultSet
@@ -13,25 +13,25 @@ import java.util.ArrayList
 
 public class GCCollabDB {
 	
-	private Sql dbInstance;
+	private Sql dbInstance
 	
-	private String dbLocation = "jdbc:sqlite:/"+ new File("").absolutePath.replace("\\", "/") + "/";
+	private String dbLocation = "jdbc:sqlite:/"+ new File("").absolutePath.replace("\\", "/") + "/"
 	private static String dbDriver = "org.sqlite.JDBC"
 	
 	public GCCollabDB(String dbName) {
 		dbLocation += dbName
-		dbInstance = Sql.newInstance(dbLocation, dbDriver);
+		dbInstance = Sql.newInstance(dbLocation, dbDriver)
 	}		
 
 	public void insertGroup(Group g){
 		if(!hasGroup(g)) {
-			dbInstance.execute("insert into Groups(groupID, link, name) values(?, ?, ?)", [g.getID(), g.getLink().toString(), g.getName()])
+			dbInstance.execute("insert into Groups(groupID, link, name) values(?, ?, ?)", [g.getID(), g.getLink().toString(), sanitize(g.getName())])
 		}
 	}
 	
 	public void insertForum(Forum f, String type){
 		if(!hasForum(f)) {
-			dbInstance.execute("insert into Forum(forumID, ownerID, link, score, description, title, type, timestamp) values(?, ?, ?, ?, ?, ?, ?, ?)", [f.getID(), f.getOwner().getID(), f.getLink().toString(), f.getScore(), f.getDescription(), f.getTitle(), type, f.getTimestamp()])
+			dbInstance.execute("insert into Forum(forumID, ownerID, link, score, description, title, type, timestamp) values(?, ?, ?, ?, ?, ?, ?, ?)", [f.getID(), f.getOwner().getID(), f.getLink().toString(), f.getScore(), sanitize(f.getDescription()), sanitize(f.getTitle()), type, f.getTimestamp()])
 		}
 				
 		if(!f.getClass().equals(Wirepost.class)) {
@@ -45,7 +45,7 @@ public class GCCollabDB {
 	
 	public void insertMessage(Reply r){			
 		if(!hasMessage(r)) {
-			dbInstance.execute("insert into Messages(messageID, message, link, forumID, score, title, timestamp) values(?, ?, ?, ?, ?, ?, ?)", [r.getID(), r.getMessage(), r.getLink().toString(), r.getForum().getID(), r.getScore(), r.getTitle(), r.getTimestamp()])
+			dbInstance.execute("insert into Messages(messageID, message, link, forumID, score, title, timestamp) values(?, ?, ?, ?, ?, ?, ?)", [r.getID(), sanitize(r.getMessage()), r.getLink().toString(), r.getForum().getID(), r.getScore(), sanitize(r.getTitle()), r.getTimestamp()])
 		}
 	}
 		
@@ -56,26 +56,26 @@ public class GCCollabDB {
 	}	
 	
 	public void close() {
-		dbInstance.close();
+		dbInstance.close()
 	}
 		
 	public boolean hasGroup(Group g) {
-		int groupID = g.getID();
-		return dbInstance.rows("select groupID from groups where groupID='"+ groupID +"'").size() > 0;
+		int groupID = g.getID()
+		return dbInstance.rows("select groupID from groups where groupID='"+ groupID +"'").size() > 0
 	}
 	
 	public boolean hasGroup(int groupID) {
-		return dbInstance.rows("select groupID from groups where groupID='"+ groupID +"'").size() > 0;
+		return dbInstance.rows("select groupID from groups where groupID='"+ groupID +"'").size() > 0
 	}
 		
 	public boolean hasForum(Forum f) {
-		int forumID = f.getID();
-		return dbInstance.rows("select forumID from forum where forumID='"+ forumID +"'").size() > 0;
+		int forumID = f.getID()
+		return dbInstance.rows("select forumID from forum where forumID='"+ forumID +"'").size() > 0
 	}
 	
 	public boolean hasMessage(Reply r) {
-		int messageID = r.getID();
-		return dbInstance.rows("select messageID from messages where messageID='"+ messageID +"'").size() > 0;
+		int messageID = r.getID()
+		return dbInstance.rows("select messageID from messages where messageID='"+ messageID +"'").size() > 0
 	}	
 	
 	public void deleteMessage(Reply r) {		
@@ -85,13 +85,13 @@ public class GCCollabDB {
 	}
 	
 	public void updateForum(Forum f) {
-		def description = f.getDescription();
-		def timestamp = f.getTimestamp();
-		def title = f.getTitle();
-		def score = f.getScore();
-		def forumID = f.getID();	
+		def description =sanitize(f.getDescription())
+		def timestamp = f.getTimestamp()
+		def title = sanitize(f.getTitle())
+		def score = f.getScore()
+		def forumID = f.getID()	
 		
-		dbInstance.execute("update forum set description ='"+ description +"', timestamp='"+ timestamp +"', score='"+ score +"', title='"+ title  +"' where forumID='"+ forumID +"'");
+		dbInstance.execute("update forum set description ='"+ description +"', timestamp='"+ timestamp +"', score='"+ score +"', title='"+ title  +"' where forumID='"+ forumID +"'")
 		
 		for(Reply r in f.getMessages()) {
 			if(r.hasChanged()) {
@@ -105,30 +105,30 @@ public class GCCollabDB {
 	}
 		
 	public void updateMessage(Reply r) {
-		def timestamp = r.getTimestamp();
-		def title = r.getTitle();
-		def messageID = r.getID();
-		def score = r.getScore();
-		def message = r.getMessage();
+		def timestamp = r.getTimestamp()
+		def title = sanitize(r.getTitle())
+		def messageID = r.getID()
+		def score = r.getScore()
+		def message = sanitize(r.getMessage())
 			
-		dbInstance.execute("update messages set timestamp='"+ timestamp +"', title='"+ title  +"', score='"+ score +"', message='"+ message +"' where MessageID='"+ messageID +"'");
+		dbInstance.execute("update messages set timestamp='"+ timestamp +"', title='"+ title  +"', score='"+ score +"', message='"+ message +"' where MessageID='"+ messageID +"'")
 	}
 	
 	//Gets all forums from the database and reconstructs them into Java objects
 	public ArrayList<Forum> getAllForums() {
 		// this function excludes wire posts
 				
-		ArrayList<Forum> forums = new ArrayList<Forum>();
+		ArrayList<Forum> forums = new ArrayList<Forum>()
 		dbInstance.rows("select * from Forum where not type='Wirepost'").each { row ->
-			int forumID = row.getProperty("forumID");
-			int ownerID = row.getProperty("ownerID");
-			URL link = new URL(row.getProperty("link"));
-			int score = row.getProperty("score");
-			String title = row.getProperty("title");
-			String description = row.getProperty("description");
-			String type = row.getProperty("type");
-			long timestamp = row.getProperty("timestamp");
-			Group owner = getOwner(ownerID);
+			def forumID = row.getProperty("forumID")
+			def ownerID = row.getProperty("ownerID")
+			def link = new URL(row.getProperty("link"))
+			def score = row.getProperty("score")
+			def title = row.getProperty("title")
+			def description = row.getProperty("description")
+			def type = row.getProperty("type")
+			def timestamp = row.getProperty("timestamp")
+			def owner = getOwner(ownerID)
 			
 			def f
 			
@@ -152,13 +152,13 @@ public class GCCollabDB {
 				f = new Event(forumID, owner, link, description, title, timestamp)
 			}		
 			
-			forums.add(f);
+			forums.add(f)
 			
 			for(Reply r in getForumMessages(f)) {
 				f.addMessage(r)
 			}
 		}
-		return forums;
+		return forums
 	}
 
 	//Get forum by ID		
@@ -166,14 +166,14 @@ public class GCCollabDB {
 		def f
 		
 		dbInstance.rows("SELECT * FROM forum WHERE forumID='" + forumID + "'").each {
-			def ownerID = it.getProperty("ownerID");
-			def link = new URL(it.getProperty("link"));
-			def score = it.getProperty("score");
-			def title = it.getProperty("title");
-			def description = it.getProperty("description");
-			def type = it.getProperty("type");
-			def timestamp = it.getProperty("timestamp");
-			def owner = getOwner(ownerID);
+			def ownerID = it.getProperty("ownerID")
+			def link = new URL(it.getProperty("link"))
+			def score = it.getProperty("score")
+			def title = it.getProperty("title")
+			def description = it.getProperty("description")
+			def type = it.getProperty("type")
+			def timestamp = it.getProperty("timestamp")
+			def owner = getOwner(ownerID)
 			
 			if(type == "Discussion") {
 				f = new Discussion(forumID,owner,link,description,title,timestamp)
@@ -223,12 +223,12 @@ public class GCCollabDB {
 		def g
 		
 		dbInstance.rows("select * from groups where groupID='"+ ownerID +"'").each {
-			URL link = new URL(it.getProperty("link"));
-			String name = it.getProperty("name");
-			g = new Group(ownerID, name, link);		
+			def link = new URL(it.getProperty("link"))
+			def name = it.getProperty("name")
+			g = new Group(ownerID, name, link)		
 		}
 		
-		return g;
+		return g
 	}
 	
 	public ArrayList<Group> getGroups() {
@@ -248,8 +248,8 @@ public class GCCollabDB {
 		
 	//Used to recreated the replies of a forum into a Java class
 	public ArrayList<Reply> getForumMessages(Forum f) {
-		ArrayList<Reply> forumMessages = new ArrayList<Reply>();
-		def forumID = f.getID();
+		ArrayList<Reply> forumMessages = new ArrayList<Reply>()
+		def forumID = f.getID()
 		
 		dbInstance.rows("select * from messages where forumID='"+ forumID +"'").each { row ->
 			
@@ -258,33 +258,33 @@ public class GCCollabDB {
 			
 			if(row.getProperty("link") == null) {
 				println("REAL LINK")
-				link = new URL(row.getProperty("link"));
+				link = new URL(row.getProperty("link"))
 			} 
 			
-			String message = row.getProperty("message");
-			long timestamp = row.getProperty("timestamp");
-			int messageID = row.getProperty("messageID");
-			int score = row.getProperty("score")
-			Reply r = new Reply(f, messageID, message, link, timestamp);
+			def message = row.getProperty("message")
+			def timestamp = row.getProperty("timestamp")
+			def messageID = row.getProperty("messageID")
+			def score = row.getProperty("score")
+			Reply r = new Reply(f, messageID, message, link, timestamp)
 			r.setScore(score)
-			forumMessages.add(r);
+			forumMessages.add(r)
 		}
 		
-		return forumMessages;
+		return forumMessages
 	}	
 	
 	//Used to get the heuristic values used for scoring
 	public TreeMap<String,Integer> setScore() {
-		def map = new TreeMap<String,Integer>(String.CASE_INSENSITIVE_ORDER);
+		def map = new TreeMap<String,Integer>(String.CASE_INSENSITIVE_ORDER)
 		dbInstance.rows("select * from HeuristicValues").each{ row ->
-			map.put(row.getProperty("Name"), row.getProperty("Value"));
+			map.put(row.getProperty("Name"), row.getProperty("Value"))
 		}
 		
 		return map
 	}
 	
 	public Integer getLargestWirepostGUID() {
-		def result
+		def result = 207//First wirepost
 		
 		dbInstance.rows("SELECT MAX(forumID) FROM Forum WHERE Type='Wirepost'").each{ row ->
 			result = row.getProperty("MAX(forumID)")
@@ -294,21 +294,36 @@ public class GCCollabDB {
 	}
 	
 	public void updateHeusticScore(String key, int value) {
-		dbInstance.execute("UPDATE HeuristicValues set Value ='" + value + "' WHERE name ='" + key +"'")
+		dbInstance.execute("UPDATE HeuristicValues set Value ='" + value + "' WHERE name ='" + sanitize(key) +"'")
 	}
 	
 	//Add cases for strings with apostrophies
 	public void addHeusticKey(String key, int value) {		
 		if(!hasKey(key)) {
-			dbInstance.execute("INSERT INTO HeuristicValues(name,value) values(?,?)", [key,value])
+			dbInstance.execute("INSERT INTO HeuristicValues(name,value) values(?,?)", [sanitize(key),value])
 		}
 	}
 	
 	public boolean hasKey(String key) {		
-		return dbInstance.rows("SELECT name FROM HeuristicValues WHERE name='" + key + "'").size() > 0
+		return dbInstance.rows("SELECT name FROM HeuristicValues WHERE name='" + sanitize(key) + "'").size() > 0
 	}
 	
 	public void deleteKey(String key) {
-		dbInstance.execute("DELETE FROM HeuristicValues WHERE name='" + key +"'")
+		dbInstance.execute("DELETE FROM HeuristicValues WHERE name='" + sanitize(key) +"'")
+	}
+	
+	public boolean isEmpty() {
+		if(dbInstance.rows("SELECT * FROM Groups").size() == 0) {
+			return true
+		}		
+		
+		return false
+	}
+	
+	//Ensures strings with apostrophies don't generate errors in the DB
+	public String sanitize(String s) {
+		if(s) {
+			return s.replaceAll("'","''")
+		}
 	}
 }

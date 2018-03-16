@@ -163,7 +163,7 @@ public class Forum {
 		if(title == null) {
 			return
 		}
-		
+				
 		if (title) {
 			if(title.contains("\"en\":\"")) {
 				def titleJson = parser.parseText(title);
@@ -193,9 +193,10 @@ public class Forum {
 			return
 		}
 		
-		if (description) {
-			if (description.contains("\"en\":\"")) {				
+		if (description && description.indexOf("\"en\":\"") == 0) {
+			if (description.contains("\"en\":\"")) {						
 				def descriptionJson = parser.parseText(description);
+				
 				description = descriptionJson.en;
 			}
 			def dom = Jsoup.parse(description);
@@ -221,11 +222,11 @@ public class Forum {
 		}
 	}
 	
-	public String sanitizeForDB(String s) {
-		if(s) {
-			return s.replaceAll("'","''")
-		}
-	}
+//	public String sanitizeForDB(String s) {
+//		if(s) {
+//			return s.replaceAll("'","''")
+//		}
+//	}
 	
 	//hasChanged and isNew values are flags used to determine if a forum has changed or is new
 	public void notifyOfChange() {
@@ -257,65 +258,12 @@ public class Forum {
 		
 		return null
 	}
-	
-	//Compares messages between two forums
-	//"this" is the forum as it was last checked
-	//"f' is the forum as it was just received from API request
-	public void compareMessages(Forum f) {
-				
-		//Check for new and modified messages		
-		for(Reply r in f.getMessages()) {
-					
-			//If a message with the same ID is found, compare the messages
-			if(getMessage(r.getID()) != null) {
-				getMessage(r.getID()).equal(r)
-			} else {
-				f.notifyOfChange()
-				r.notifyNew()
-			}
-		}
 		
-		//Check for deleted messages
+	public void findDeletedMessages(Forum f) {		
 		for(Reply r in messages) {
 			if(f.getMessage(r.getID()) == null) {
-				f.addDeletedMessage(r)
-				f.notifyOfChange()
+				deletedMessages.add(r)
 			}
 		}
-	}
-		
-	//Compares 2 forums to check if a forum has been updated since last check
-	//"this" is the forum as it was last checked
-	//"f" is the forum as it was just received from the API request
-	//Wirepost should not be compared using this function
-	public void compareForums(Forum f) {
-		
-		//Check if the description has changed
-		if(!f.getDescription().equals(description)) {			
-			println("Forum #" + GUID + " changed, because the description is different")
-			f.notifyOfChange()
-		}
-	
-		
-		//Check if the title has changed
-		if(!f.getTitle().equals(title)) {
-			println("Forum #" + GUID + " changed, because the title is different")
-			f.notifyOfChange()
-		}
-		
-		//Check if any of the messages have changed, been remove or edited
-		compareMessages(f)											
-	}
-	
-	public ArrayList<Reply> getDeletedMessages(Forum f) {
-		def deleted = new ArrayList<Reply>()
-		
-		for(Reply r in messages) {
-			if(f.getMessage(r.getID()) == null) {
-				deleted.add(r)
-			}
-		}
-		
-		return deleted
 	}
 }
