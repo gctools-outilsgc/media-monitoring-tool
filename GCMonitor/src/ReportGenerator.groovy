@@ -74,4 +74,9 @@ import java.time.format.DateTimeFormatter
 				
 		bw.close()
 	}
+	
+	//Generate report from a new group
+	public generateGroupReport(Group g) {
+		
+	}
 }
