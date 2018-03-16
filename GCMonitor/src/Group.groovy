@@ -9,6 +9,7 @@
  * 
  */
 
+import groovy.json.JsonSlurper
 import java.net.URL
 import java.util.ArrayList
 
@@ -25,6 +26,8 @@ public class Group{
 		name = n
 		forums = new ArrayList<Forum>()
 		tags = new ArrayList<String>()
+		
+		sanitize()
 	}	
 	
 	public int getID() {
@@ -154,5 +157,21 @@ public class Group{
 		}
 		
 		return list
+	}
+	
+	public void sanitize() {
+		def parser = new JsonSlurper()
+		
+		if(name == null) {
+			return
+		}
+				
+		if (name) {
+			if(name.contains("\"en\":\"")) {
+				def titleJson = parser.parseText(name);
+				name = titleJson.en;
+				
+			}
+		}
 	}
 }

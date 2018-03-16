@@ -492,6 +492,7 @@ for (Forum f in liveList) {
 dbStatic.close()
 
 println("Producing report")
+
 //Produce report
 //def reporter = new ReportGenerator(n,u)
 //reporter.generateReport()

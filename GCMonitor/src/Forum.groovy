@@ -171,6 +171,7 @@ public class Forum {
 				
 			}
 		}
+		
 		def dom = Jsoup.parse(title)	
 		
 		//Add list of special characters to sanitize

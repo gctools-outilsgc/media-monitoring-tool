@@ -77,6 +77,36 @@ import java.time.format.DateTimeFormatter
 	
 	//Generate report from a new group
 	public generateGroupReport(Group g) {
+		def date = new Date()
+		def groupName = g.getName().replaceAll(" ", "_")
+		def fileName = groupName + date.getTime() + ".csv"
+		def type
 		
+		println("This is g.getName(): " + g.getName())
+		
+		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
+		
+		bw.writeLine("Group, Link")
+		bw.writeLine(g.getName() + "," + g.getLink())
+		bw.newLine()
+		bw.writeLine("Forum(Score), Type, Link")
+		bw.newLine()
+	
+		for(Forum f in g.getForums()) {
+			if(f.getClass().equals(Discussion.class)) {
+				type = "Discussion"
+			}
+			
+			if(f.getClass().equals(Blog.class)) {
+				type = "Blog"
+			}
+			
+			if(f.getClass().equals(Event.class)) {
+				type = "Event"
+			}
+			bw.writeLine(f.getTitle() + "(" + f.getScore() + ")," + type + "," + f.getLink())
+		}
+		 
+		bw.close()	
 	}
 }
