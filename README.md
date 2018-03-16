@@ -8,8 +8,6 @@ Project is written in groovy using Eclipse
 
 In file UserInfo.txt [EMAIL] needs to be replaced with the email used to connect to GCCollab and [PASSWORD] Needs to be replaced with your GCCollab password, without the brackets.
 
-In GCCollabDB.groovy on line 18, the path to the database needs to be changed to the correct location on your host machine(TO BE FIXED TO RELATIVE PATH LATER)
-
 In order to run the script you will need to import a couple jar files to the project
 
 - Jsoup version 1.10.3 or older at [JSoup](https://jsoup.org/download)
@@ -22,13 +20,13 @@ In order to run the script you will need to import a couple jar files to the pro
 
   - The groups table holds a list of all groups that are being monitored. The list is determined by querying GCCollab/GCConnex for groups with descriptions or titles that match keywords with high likelihood of mentioning topics to the related subject which is being monitored
 
-    - Groups can be entered manually **(Not implemented yet)**
+    - Groups can be entered manually. Importing a group manually will generate a new report based on information in the group from the groups creation, each following time the script runs only the last 24h will be checked
 
   - The forums table (Discussions, Blogs, Events...) and the messages table holds data on items from groups which have already been monitored
 
   - The heuristicValues table holds all the keyword and values which are used in scoring how relevant a forum is and finding new groups to monitor. User's have to input each keyword(name) and value(value) in the table for the script to run **(Not yet implemented can be done using any SQLite client)**
 
-Once an initial set of heuristic values is entered in the database and the changes to UserInfo.txt and line 18 of GCCollabDB.groovy have been made the script can run. The script will only check for new or modified information from the last 24 hours.
+Once an initial set of heuristic values is entered in the database and the changes to UserInfo.txt have been made the script can run. The script will only check for new or modified information from the last 24 hours.
 
 ## How to run the script for GCconnex
 
