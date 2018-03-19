@@ -181,9 +181,9 @@ public ArrayList<Forum> getForums() {
 
 	for(Group g in listGroups) {
 		id = g.getID()
-
+		
 		for(String s in cmd) {
-
+					
 			try {
 			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=" + s + "&group=" + id)
 			post = url.openConnection()
@@ -197,6 +197,11 @@ public ArrayList<Forum> getForums() {
 				postRC = post.getResponseCode()
 				continue
 			} 
+			
+			//FOR TESTING
+			println("--------------------BREAKER LINE-----------------")
+			println("This is id: " + id)
+			println("This is cmd: " + s)
 			
 			if(postRC == 200) {
 
@@ -250,6 +255,8 @@ public ArrayList<Forum> getForums() {
 			} else {
 				println("This is error code: " + postRC)
 			}
+			
+			postRC = null
 		}
 	}
 
@@ -258,7 +265,7 @@ public ArrayList<Forum> getForums() {
 
 public void getMessages(Forum f, ArrayList<String> replies) {
 	def reply
-
+	
 	if(replies != null) {
 		for(def i=0;i<replies.size();i++) {
 			reply = new Reply(f,replies.get(i).guid, replies.get(i).description, new URL(replies.get(i).url),getTimestamp(replies.get(i).time_updated))
@@ -327,6 +334,21 @@ public HashSet<Wirepost> getWireposts() {
 	}
 
 	return wireposts
+}
+
+public ArrayList<Reply> findDeletedMessages(Forum f) {
+	def deletedMessages = new ArrayList<Reply>()
+	def forum = dbStatic.getForum(f.getID())
+	
+	if(forum != null) {
+		for(Reply r in forum.getMessages()) {
+			if(!f.hasMessage(r.getID())) {
+				deletedMessages.add(r)
+			}			
+		}
+	}
+	
+	return deletedMessages	
 }
 
 //Build user information from file
@@ -454,6 +476,8 @@ println("Creating list for report")
 //For report only
 def n = new ArrayList<Forum>()//List of new forums
 def u = new ArrayList<Forum>()//List of updated forums
+def d = new ArrayList<Reply>()//List of deleted messages
+
 for(Forum f in liveList) {
 	if(f.isNew()) {
 		n.add(f)
@@ -461,6 +485,10 @@ for(Forum f in liveList) {
 
 	if(f.hasChanged()) {
 		u.add(f)
+	}	
+	
+	for(Reply r in findDeletedMessages(f)) {
+		d.add(r)
 	}
 }
 
@@ -475,28 +503,57 @@ for (Forum f in liveList) {
 	if(f.isNew()) {	
 		if (f.getClass().equals(Discussion.class)) {
 			dbStatic.insertForum(f , "Discussion")
+			
+			for(Reply r in f.getMessages()) {
+				dbStatic.insertMessage(r)
+			}
 		}
 
 		if (f.getClass().equals(Blog.class)) {
 			dbStatic.insertForum(f, "Blog")
+			
+			for(Reply r in f.getMessages()) {
+				dbStatic.insertMessage(r)
+			}
 		}
 
 		if (f.getClass().equals(Event.class)) {
 			dbStatic.insertForum(f, "Event")
+			
+			for(Reply r in f.getMessages()) {
+				dbStatic.insertMessage(r)
+			}
 		}
 
 		if (f.getClass().equals(Files.class)) {
 			dbStatic.insertForum(f, "Files")
+			
+			for(Reply r in f.getMessages()) {
+				dbStatic.insertMessage(r)
+			}
 		}
 
 		if (f.getClass().equals(Document.class)) {
 			dbStatic.insertForum(f, "Document")
+			
+			for(Reply r in f.getMessages()) {
+				dbStatic.insertMessage(r)
+			}
 		}
 	}
 
 	if (f.hasChanged()) {			
 		dbStatic.updateForum(f)
 
+		for(Reply r in f.getMessages()) {
+			if(r.hasChanged()) {
+				dbStatic.updateMessage(r)
+			}
+			
+			if(r.isNew()) {
+				dbStatic.insertMessage(r)
+			}
+		}
 		//TODO remake function to detect deleted messages
 		if(!f.getDeletedMessages().isEmpty()) {
 			for(Reply r in f.getDeletedMessages()) {

@@ -164,6 +164,7 @@ public class GCCollabDB {
 	//Get forum by ID		
 	public Forum getForum(int forumID) {
 		def f
+		def type
 		
 		dbInstance.rows("SELECT * FROM forum WHERE forumID='" + forumID + "'").each {
 			def ownerID = it.getProperty("ownerID")
@@ -171,7 +172,7 @@ public class GCCollabDB {
 			def score = it.getProperty("score")
 			def title = it.getProperty("title")
 			def description = it.getProperty("description")
-			def type = it.getProperty("type")
+			type = it.getProperty("type")
 			def timestamp = it.getProperty("timestamp")
 			def owner = getOwner(ownerID)
 			
@@ -193,13 +194,18 @@ public class GCCollabDB {
 			
 			if(type == "Event") {
 				f = new Event(forumID, owner, link, description, title, timestamp)
+			}			
+		}
+		
+		if(type == "Discussion") {
+			for(Reply r in getForumMessages(f)) {
+				f.addMessage(r)
 			}
-			
 		}
 		
 		return f
 	}
-	
+		
 	//Get message by ID
 	public Reply getMessage(int messageID) {
 		def r
@@ -262,7 +268,7 @@ public class GCCollabDB {
 			} 
 			
 			def message = row.getProperty("message")
-			def timestamp = row.getProperty("timestamp")
+			long timestamp = row.getProperty("timestamp")
 			def messageID = row.getProperty("messageID")
 			def score = row.getProperty("score")
 			Reply r = new Reply(f, messageID, message, link, timestamp)
@@ -297,10 +303,9 @@ public class GCCollabDB {
 		dbInstance.execute("UPDATE HeuristicValues set Value ='" + value + "' WHERE name ='" + sanitize(key) +"'")
 	}
 	
-	//Add cases for strings with apostrophies
 	public void addHeusticKey(String key, int value) {		
 		if(!hasKey(key)) {
-			dbInstance.execute("INSERT INTO HeuristicValues(name,value) values(?,?)", [sanitize(key),value])
+			dbInstance.execute("INSERT INTO HeuristicValues(name,value) values(?,?)", sanitize(key),value)
 		}
 	}
 	

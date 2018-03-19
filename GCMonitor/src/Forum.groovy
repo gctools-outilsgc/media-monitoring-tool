@@ -259,6 +259,16 @@ public class Forum {
 		
 		return null
 	}
+	
+	public boolean hasMessage(int id) {
+		for(def i=0;i<messages.size();i++) {
+			if(messages.get(i).getID() == id) {
+				return true
+			}
+		}
+		
+		return false
+	}
 		
 	public void findDeletedMessages(Forum f) {		
 		for(Reply r in messages) {
