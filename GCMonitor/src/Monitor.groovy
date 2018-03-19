@@ -109,6 +109,7 @@ public long getTimestamp(String s) {
 	return date.getTime()
 }
 
+//Queries GCCollab/GCConnex for new groups matching high value keywords
 public void updateGroupList() {
 
 	def parser = new JsonSlurper()
@@ -120,18 +121,28 @@ public void updateGroupList() {
 	def query
 	def value
 	def g
-	Set<Map.Entry<String,Integer>> entrySet = heuristicValues.entrySet()
 
-	entrySet.each { entry ->
-		query = entry.getKey().replaceAll(" ", "%20");
-		value = entry.getValue();
+	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
+		query = entry.getKey().replaceAll(" ", "%20")
+		value = entry.getValue()
+		
 		if (value >= 10) {
+			
+			try {
 			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
-
 			post = url.openConnection()
 			post.requestMethod = 'POST'
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
+			} catch(java.net.ConnectException e) {
+				url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
+				post = url.openConnection()
+				post.requestMethod = 'POST'
+				post.setDoOutput(true)
+				postRC = post.getResponseCode()
+				continue
+			}
+			
 			if (postRC == 200) {
 				responseString = post.getInputStream().getText()
 				response = parser.parseText(responseString)
@@ -148,7 +159,6 @@ public void updateGroupList() {
 			}
 		}
 	}
-
 }
 
 public ArrayList<Forum> getForums() {
@@ -174,12 +184,20 @@ public ArrayList<Forum> getForums() {
 
 		for(String s in cmd) {
 
+			try {
 			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=" + s + "&group=" + id)
 			post = url.openConnection()
 			post.requestMethod = 'POST'
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
-
+			} catch(java.net.ConnectException e) {
+				post = url.openConnection()
+				post.requestMethod = 'POST'
+				post.setDoOutput(true)
+				postRC = post.getResponseCode()
+				continue
+			} 
+			
 			if(postRC == 200) {
 
 				responseString = post.getInputStream().getText()
@@ -271,13 +289,23 @@ public HashSet<Wirepost> getWireposts() {
 	def offset = 0
 	def group = new Group(1,"wirepost",new URL("https://gccollab.ca/newsfeed/"))//Fake group for wireposts
 	def parser = new JsonSlurper()
+	def time = 0
 
-	while(1) {
-		url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=wire&limit=25&offset=" + offset)
-		post = url.openConnection()
-		post.requestMethod = 'POST'
-		post.setDoOutput(true)
-		postRC = post.getResponseCode()
+	while(time < timestampWire) {
+		try {
+			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=wire&limit=25&offset=" + offset)
+			post = url.openConnection()
+			post.requestMethod = 'POST'
+			post.setDoOutput(true)
+			postRC = post.getResponseCode()
+		} catch (java.net.ConnectException e) {
+			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=wire&limit=25&offset=" + offset)
+			post = url.openConnection()
+			post.requestMethod = 'POST'
+			post.setDoOutput(true)
+			postRC = post.getResponseCode()
+			continue
+		}
 
 		if(postRC == 200) {
 			responseString = post.getInputStream().getText()
@@ -287,15 +315,11 @@ public HashSet<Wirepost> getWireposts() {
 				if(response.result.get(i).guid <= largestWirepostID) {
 					return wireposts
 				}
-
-				println("This is guid: " + response.result.get(i).guid)
 				
 				wire = new Wirepost(response.result.get(i).guid, group, new URL(response.result.get(i).url),response.result.get(i).description,response.result.get(i).title,getTimestamp(response.result.get(i).time_created))
 				wireposts.add(wire)
-				
-				if(response.result.get(i).guid == 207) {
-					return wireposts
-				}
+												
+				time = response.result.get(i).time_updated
 			}
 		}
 
@@ -327,12 +351,13 @@ largestWirepostID = dbStatic.getLargestWirepostGUID()
 
 if(!dbStatic.isEmpty()) {
 	timestamp = new Date().minus(1).getTime()//Returns this time yesterday
+	timestampWire = new Date().minus(1).getTime()
 } else {
-	timestamp = new Date(100,0,0).getTime()
+	timestamp = new Date(100,0,0).getTime()//Returns a time before GCCollab/GCConnex
+	timestampWire = new Date().minus(7).getTime()
 }
 
 updateGroupList();
-
 listGroups = dbStatic.getGroups() //List of all groups from the database
 
 println("Getting all forums from API")
@@ -370,8 +395,16 @@ println("(Re)calculation scores for forums")
 //Calculate the score of every new forum found
 //Maybe change description into a message(First message in the list?)
 for(Forum f in liveList) {
-
 	def score = 0
+	
+	if(f.getClass().equals(Wirepost.class)) {	
+		for(String s in f.getDescription()) {
+			score += scoreSentence(s,heuristicValues)
+		}
+		
+		f.setScore(score)
+		score = 0
+	}
 
 	if(f.isNew()) {
 		for(Reply r in f.getMessages()) {
@@ -407,7 +440,6 @@ for(Forum f in liveList) {
 			}
 		}
 
-		//Temporary
 		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s, heuristicValues)
 		}
@@ -432,21 +464,7 @@ for(Forum f in liveList) {
 	}
 }
 
-////Sanitizing for DB
-//for(Forum f in liveList) {
-//	f.setTitle(f.sanitizeForDB(f.getTitle()))
-//	f.setDescription(f.sanitizeForDB(f.getDescription()))
-//
-//	for(Reply r in f.getMessages()) {
-//		r.setMessage(f.sanitizeForDB(r.getMessage()))
-//	}
-//}
-
 println("Updating DB")
-
-for (Wirepost w in wireposts) {
-	dbStatic.insertForum(w, "Wirepost")
-}
 
 //Perform updates on DB
 for (Forum f in liveList) {	
@@ -479,8 +497,8 @@ for (Forum f in liveList) {
 	if (f.hasChanged()) {			
 		dbStatic.updateForum(f)
 
+		//TODO remake function to detect deleted messages
 		if(!f.getDeletedMessages().isEmpty()) {
-
 			for(Reply r in f.getDeletedMessages()) {
 				dbStatic.deleteMessage(r)
 			}
@@ -494,5 +512,5 @@ dbStatic.close()
 println("Producing report")
 
 //Produce report
-//def reporter = new ReportGenerator(n,u)
-//reporter.generateReport()
+def reporter = new ReportGenerator(n,u)
+reporter.generateReport()

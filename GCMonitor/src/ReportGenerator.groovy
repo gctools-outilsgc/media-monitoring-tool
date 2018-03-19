@@ -17,14 +17,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter  
 
 /*		TODO LIST
- * -	Sanitize the Forum's output to look better in the report
  * -	Change the format to something more readable without having to resize the columns in CSV format
- * -	Add additional information
  * -	Automatically send the report to interested parties
- * -	How to report changes in forums?
  * 
  */
-
  
  public class ReportGenerator {
 	private ArrayList<Forum> newForum
@@ -37,10 +33,7 @@ import java.time.format.DateTimeFormatter
 	
 	public generateReport() {
 		def date = new Date()
-		def DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd:HH:mm:ss")
-		def breaker = false
-		DATE_FORMAT.format(date)
-		 
+		def type
 		def fileName = "Monitoring_Report_" + date.getTime() + ".csv"
 		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
 		
@@ -51,15 +44,19 @@ import java.time.format.DateTimeFormatter
 		
 		for(Forum f in newForum) {
 			
-			if(f.getClass().equals(Wirepost.class) && breaker == false) {
-				bw.newLine()
-				bw.write("Wireposts")
-				bw.newLine()
-				bw.newLine()
-				breaker = true
+			if(f.getClass().equals(Discussion.class)) {
+				type = "Discussion"
 			}
 			
-			bw.write(f.class.toString() + ":" + f.getTitle() + "(" + f.getScore() + "), " + f.getLink())
+			if(f.getClass().equals(Blog.class)) {
+				type = "Blog"
+			}
+			
+			if(f.getClass().equals(Event.class)) {
+				type = "Event"
+			}
+					
+			bw.write(type + ":" + f.getTitle() + "(" + f.getScore() + "), " + f.getLink())
 			bw.newLine()
 		}
 		
@@ -73,6 +70,7 @@ import java.time.format.DateTimeFormatter
 		}
 				
 		bw.close()
+		sendReport(fileName)
 	}
 	
 	//Generate report from a new group
@@ -108,5 +106,10 @@ import java.time.format.DateTimeFormatter
 		}
 		 
 		bw.close()	
+	}
+	
+	//TODO 
+	public void sendReport(String fileName) {
+		
 	}
 }
