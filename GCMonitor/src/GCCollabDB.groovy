@@ -115,8 +115,8 @@ public class GCCollabDB {
 	}
 	
 	//Gets all forums from the database and reconstructs them into Java objects
+	//This fucntion excludes wireposts
 	public ArrayList<Forum> getAllForums() {
-		// this function excludes wire posts
 				
 		ArrayList<Forum> forums = new ArrayList<Forum>()
 		dbInstance.rows("select * from Forum where not type='Wirepost'").each { row ->
@@ -159,6 +159,20 @@ public class GCCollabDB {
 			}
 		}
 		return forums
+	}
+	
+	//TODO
+	public ArrayList<Wirepost> getWireposts() {
+		def wireposts = new ArrayList<Wirepost>()
+		
+		return wireposts
+	}
+	
+	//TODO
+	public Wirepost getWirepost(int guid) {
+		def wirepost
+		
+		return wirepost
 	}
 
 	//Get forum by ID		
@@ -325,7 +339,8 @@ public class GCCollabDB {
 		return false
 	}
 	
-	//Ensures strings with apostrophies don't generate errors in the DB
+	//Removes reserved characters from strings
+	//TODO add other reserved characters to the list of characters to be removed
 	public String sanitize(String s) {
 		if(s) {
 			return s.replaceAll("'","''")

@@ -3,23 +3,23 @@
  * Main function of the script
  *
  * How the script runs:
- * 	- Get a list of Groups and Forums, with their replies from the Database
- * 	- From the list of groups, query GCCollab for a live list of Forums for each group, with their replies
- * 	- Mark any new or changed forum, including replies to forums
+ * 	- Get the heuristic values of keywords from the database
+ *  - Update the list of groups to monitor
+ *  - Get the updated list of groups from the database and request Discussion, Events and Blogs from each group
+ * 	- For each discussion, event or blog, look if either is new, has been updated or has a new/updated reply and mark them
  * 	- (Re)Calculate the score for each forum and message which was identified as new or having changed
  * 	- Update the database
  * 	- Generate a report
+ *  - Additionally the script will look for wireposts, based on the largest wirepost ID in the database
+ *  	- If this is the first time you run the script, the script will look for all wireposts within the last week
  *
  * Things to add or change:
- * 	- Find a better way to filter results of live list by data and time
- * 	- Automate group detection for possible monitoring
- *  - Automate report delivery
+ * 	- Manually add a group to be monitored and produce a report with all information from that group
+ *  - Manually add one or multiple keywords with their heuristic values and generate a report based on new groups discovered based on those keywords
  */
 
 import java.util.ArrayList
-import java.util.Set
 import java.util.HashSet
-import java.util.Map
 import java.util.TreeMap
 import java.util.Date
 import java.io.BufferedReader
@@ -28,8 +28,6 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import groovy.json.JsonSlurper
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
 
 //Returns an ArrayList of Strings which represent sentences from a message
 //Message should never be null
@@ -45,9 +43,8 @@ public ArrayList<String> getSentences(String message) {
 
 //Scores a sentence based on heuristic values
 public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
-
 	def score = 0
-	def ArrayList<String> splitString = s.split()//Split the string into words
+	def ArrayList<String> splitString = s.split(" +")//Split the string into words
 	def ArrayList<String> keywordCombinations = new ArrayList<String>()//Keep track of every instance of a keyword combination found
 	def ArrayList<String> keywords = new ArrayList<String>()//Keep track of every instance of a keyword found
 	def tmp//Used as temporary string to find keyword combinations
@@ -95,7 +92,6 @@ public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
 			score += tmpScore * tmpScore
 		}
 	}
-
 	return score
 }
 
@@ -135,6 +131,7 @@ public void updateGroupList() {
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
 			} catch(java.net.ConnectException e) {
+				println("A connection timeout error has been detected. If this error perciste, please try with a better connection")
 				url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
 				post = url.openConnection()
 				post.requestMethod = 'POST'
@@ -191,6 +188,8 @@ public ArrayList<Forum> getForums() {
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
 			} catch(java.net.ConnectException e) {
+				println("A connection timeout error has been detected. If this error perciste, please try with a better connection")
+				url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=" + s + "&group=" + id)
 				post = url.openConnection()
 				post.requestMethod = 'POST'
 				post.setDoOutput(true)
@@ -202,6 +201,7 @@ public ArrayList<Forum> getForums() {
 			println("--------------------BREAKER LINE-----------------")
 			println("This is id: " + id)
 			println("This is cmd: " + s)
+			println("")
 			
 			if(postRC == 200) {
 
@@ -306,6 +306,7 @@ public HashSet<Wirepost> getWireposts() {
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
 		} catch (java.net.ConnectException e) {
+			println("A connection timeout error has been detected. If this error perciste, please try with a better connection")
 			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=wire&limit=25&offset=" + offset)
 			post = url.openConnection()
 			post.requestMethod = 'POST'
@@ -379,7 +380,8 @@ if(!dbStatic.isEmpty()) {
 	timestampWire = new Date().minus(7).getTime()
 }
 
-updateGroupList();
+//Temporarily removed during testing, will be added later
+//updateGroupList();
 listGroups = dbStatic.getGroups() //List of all groups from the database
 
 println("Getting all forums from API")
@@ -435,6 +437,7 @@ for(Forum f in liveList) {
 			}
 
 			r.setScore(score)
+
 			score = 0
 		}
 
@@ -554,7 +557,7 @@ for (Forum f in liveList) {
 				dbStatic.insertMessage(r)
 			}
 		}
-		//TODO remake function to detect deleted messages
+
 		if(!f.getDeletedMessages().isEmpty()) {
 			for(Reply r in f.getDeletedMessages()) {
 				dbStatic.deleteMessage(r)

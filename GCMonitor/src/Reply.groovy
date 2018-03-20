@@ -131,6 +131,7 @@ public class Reply {
 		message = message.replaceAll("\\\\n","")
 		message = message.replaceAll("\\\\t","")
 		message = message.replaceAll("<\\\\/sup>", "")
+		message = message.replaceAll("&nbsp;", " ")
 	}
 	
 	public void setMessage(String m) {
