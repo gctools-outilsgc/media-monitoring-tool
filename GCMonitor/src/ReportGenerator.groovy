@@ -39,7 +39,8 @@ import java.time.format.DateTimeFormatter
 		
 		bw.write("Forum(Score), Link")
 		bw.newLine()		
-		bw.write("New Forums")
+		bw.newLine()
+		bw.write("New Forums:")
 		bw.newLine()
 		
 		for(Forum f in newForum) {
@@ -61,7 +62,7 @@ import java.time.format.DateTimeFormatter
 		}
 		
 		bw.newLine()
-		bw.write("Updated Forums")
+		bw.write("Updated Forums:")
 		bw.newLine()
 				
 		for(Forum f in updatedForum) {
@@ -74,13 +75,11 @@ import java.time.format.DateTimeFormatter
 	}
 	
 	//Generate report from a new group
-	public generateGroupReport(Group g) {
+	public void generateGroupReport(Group g) {
 		def date = new Date()
 		def groupName = g.getName().replaceAll(" ", "_")
 		def fileName = groupName + date.getTime() + ".csv"
 		def type
-		
-		println("This is g.getName(): " + g.getName())
 		
 		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
 		
@@ -108,8 +107,76 @@ import java.time.format.DateTimeFormatter
 		bw.close()	
 	}
 	
+	public void generateKeywordReport(ArrayList<Group> groups, String k) {
+		def date = new Date()
+		def keyword = k.replaceAll(" ","_")
+		def fileName = keywords +date + ".csv"
+		def type
+		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
+		
+		
+		for(Group g in groups) {
+			bw.writeLine("Group,Link")
+			bw.writeLine(g.getName() + "," + g.getLink())
+			bw.newLine()
+			bw.writeLine("Forum(Score),Type,Link")
+			bw.newLine()
+			
+			for(Forum f in g.getForums()) {
+				if(f.getClass().equals(Discussion.class)) {
+					type = "Discussion"
+				}
+				
+				if(f.getClass().equals(Blog.class)) {
+					type = "Blog"
+				}
+				
+				if(f.getClass().equals(Event.class)) {
+					type = "Class"
+				}
+				
+				bw.writeLine(f.getTitle() + "(" + f.getScore() + ")," + type + "," + f.getLink())
+			}
+		}
+		
+		bw.close()	
+	}
+	
 	//TODO 
 	public void sendReport(String fileName) {
 		
+	}
+	
+	//TODO
+	public void reportFromTo(Date t, Date f, GCCollabDB db) {
+		def to = t.getTime()
+		def from = f.getTime()
+		def fileName = "MonitorReport_From_" + f.getTime() + "_to_" + t.getTime() + ".csv"
+		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
+		def forums = db.getAllForums()		
+		def type
+		
+		bw.writeLine("Forum(Score),Type,Link")
+		bw.newLine()
+		
+		for(Forum fs in forums) {					
+			if(fs.getTimestamp() <= to && fs.getTimestamp() >= from) {
+				if(fs.class.equals(Discussion.class)) {
+					type = "Discussion"
+				}
+				
+				if(fs.getClass().equals(Blog.class)) {
+					type = "Blog"
+				}
+				
+				if(fs.getClass().equals(Event.class)) {
+					type = "Event"
+				}
+				
+				bw.newLine()
+				bw.writeLine(fs.getTitle() + "(" + fs.getScore() + ")," + type + "," + fs.getLink())
+			}
+		}	
+		bw.close()
 	}
 }
