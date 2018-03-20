@@ -27,7 +27,7 @@ if(newGroup) {
 /*--------------------------------------FUNCTIONS-----------------------------------------------*/
 
 public Group addNewGroup(String groupTitle) {
-	
+
 	def parser = new JsonSlurper()
 	def post
 	def postRC
@@ -38,10 +38,10 @@ public Group addNewGroup(String groupTitle) {
 	def value
 	def g
 
-	
-	query = groupTitle.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%27");	
+
+	query = groupTitle.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%27");
 	println("Your group title is: " + query);
-		
+
 	try {
 	url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
 	println("URL: " + url)
@@ -56,7 +56,7 @@ public Group addNewGroup(String groupTitle) {
 		post.setDoOutput(true)
 		postRC = post.getResponseCode()
 	}
-	
+
 	if (postRC == 200) {
 		responseString = post.getInputStream().getText()
 		response = parser.parseText(responseString)
@@ -82,17 +82,13 @@ public Group addNewGroup(String groupTitle) {
 //Build user information from file
 public UserInfo getUserInfo() {
 	def br = new BufferedReader(new FileReader("userInfo.txt"))
-	
+
 	def line = br.readLine()
 
 	String[] tokenize = line.split(",")
 	def user = new UserInfo(tokenize[0],tokenize[1])
-	
+
 	br.close()
 
 	return user
 }
-
-
-
-

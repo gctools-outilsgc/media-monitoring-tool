@@ -121,9 +121,9 @@ public void updateGroupList() {
 	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
 		query = entry.getKey().replaceAll(" ", "%20")
 		value = entry.getValue()
-		
+
 		if (value >= 10) {
-			
+
 			try {
 			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
 			post = url.openConnection()
@@ -139,7 +139,7 @@ public void updateGroupList() {
 				postRC = post.getResponseCode()
 				continue
 			}
-			
+
 			if (postRC == 200) {
 				responseString = post.getInputStream().getText()
 				response = parser.parseText(responseString)
@@ -178,9 +178,9 @@ public ArrayList<Forum> getForums() {
 
 	for(Group g in listGroups) {
 		id = g.getID()
-		
+
 		for(String s in cmd) {
-					
+
 			try {
 			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=" + s + "&group=" + id)
 			post = url.openConnection()
@@ -195,14 +195,14 @@ public ArrayList<Forum> getForums() {
 				post.setDoOutput(true)
 				postRC = post.getResponseCode()
 				continue
-			} 
-			
+			}
+
 			//FOR TESTING
 			println("--------------------BREAKER LINE-----------------")
 			println("This is id: " + id)
 			println("This is cmd: " + s)
 			println("")
-			
+
 			if(postRC == 200) {
 
 				responseString = post.getInputStream().getText()
@@ -255,7 +255,7 @@ public ArrayList<Forum> getForums() {
 			} else {
 				println("This is error code: " + postRC)
 			}
-			
+
 			postRC = null
 		}
 	}
@@ -265,7 +265,7 @@ public ArrayList<Forum> getForums() {
 
 public void getMessages(Forum f, ArrayList<String> replies) {
 	def reply
-	
+
 	if(replies != null) {
 		for(def i=0;i<replies.size();i++) {
 			reply = new Reply(f,replies.get(i).guid, replies.get(i).description, new URL(replies.get(i).url),getTimestamp(replies.get(i).time_updated))
@@ -277,7 +277,7 @@ public void getMessages(Forum f, ArrayList<String> replies) {
 				f.notifyOfChange()
 				reply.notifyOfChange()
 			}
-			
+
 			f.addMessage(reply)
 		}
 	}
@@ -323,10 +323,10 @@ public HashSet<Wirepost> getWireposts() {
 				if(response.result.get(i).guid <= largestWirepostID) {
 					return wireposts
 				}
-				
+
 				wire = new Wirepost(response.result.get(i).guid, group, new URL(response.result.get(i).url),response.result.get(i).description,response.result.get(i).title,getTimestamp(response.result.get(i).time_created))
 				wireposts.add(wire)
-												
+
 				time = response.result.get(i).time_updated
 			}
 		}
@@ -340,16 +340,16 @@ public HashSet<Wirepost> getWireposts() {
 public ArrayList<Reply> findDeletedMessages(Forum f) {
 	def deletedMessages = new ArrayList<Reply>()
 	def forum = dbStatic.getForum(f.getID())
-	
+
 	if(forum != null) {
 		for(Reply r in forum.getMessages()) {
 			if(!f.hasMessage(r.getID())) {
 				deletedMessages.add(r)
-			}			
+			}
 		}
 	}
-	
-	return deletedMessages	
+
+	return deletedMessages
 }
 
 //Build user information from file
@@ -359,7 +359,7 @@ public UserInfo getUserInfo() {
 
 	String[] tokenize = line.split(",")
 	def user = new UserInfo(tokenize[0],tokenize[1])
-	
+
 	br.close()
 
 	return user
@@ -398,7 +398,7 @@ def count = 0
 for(Forum f in liveList) {
 	if(f.isNew() || f.hasChanged()) {
 		count++
-	}	
+	}
 }
 
 println("This is the number of new or updated forums: " + count)
@@ -420,12 +420,12 @@ println("(Re)calculation scores for forums")
 //Maybe change description into a message(First message in the list?)
 for(Forum f in liveList) {
 	def score = 0
-	
-	if(f.getClass().equals(Wirepost.class)) {	
+
+	if(f.getClass().equals(Wirepost.class)) {
 		for(String s in f.getDescription()) {
 			score += scoreSentence(s,heuristicValues)
 		}
-		
+
 		f.setScore(score)
 		score = 0
 	}
@@ -488,8 +488,8 @@ for(Forum f in liveList) {
 
 	if(f.hasChanged()) {
 		u.add(f)
-	}	
-	
+	}
+
 	for(Reply r in findDeletedMessages(f)) {
 		d.add(r)
 	}
@@ -498,15 +498,15 @@ for(Forum f in liveList) {
 println("Updating DB")
 
 //Perform updates on DB
-for (Forum f in liveList) {	
+for (Forum f in liveList) {
 	if (f.getClass().equals(Wirepost.class)) {
 		dbStatic.insertForum(f, "Wirepost")
 	}
 
-	if(f.isNew()) {	
+	if(f.isNew()) {
 		if (f.getClass().equals(Discussion.class)) {
 			dbStatic.insertForum(f , "Discussion")
-			
+
 			for(Reply r in f.getMessages()) {
 				dbStatic.insertMessage(r)
 			}
@@ -514,7 +514,7 @@ for (Forum f in liveList) {
 
 		if (f.getClass().equals(Blog.class)) {
 			dbStatic.insertForum(f, "Blog")
-			
+
 			for(Reply r in f.getMessages()) {
 				dbStatic.insertMessage(r)
 			}
@@ -522,7 +522,7 @@ for (Forum f in liveList) {
 
 		if (f.getClass().equals(Event.class)) {
 			dbStatic.insertForum(f, "Event")
-			
+
 			for(Reply r in f.getMessages()) {
 				dbStatic.insertMessage(r)
 			}
@@ -530,7 +530,7 @@ for (Forum f in liveList) {
 
 		if (f.getClass().equals(Files.class)) {
 			dbStatic.insertForum(f, "Files")
-			
+
 			for(Reply r in f.getMessages()) {
 				dbStatic.insertMessage(r)
 			}
@@ -538,21 +538,21 @@ for (Forum f in liveList) {
 
 		if (f.getClass().equals(Document.class)) {
 			dbStatic.insertForum(f, "Document")
-			
+
 			for(Reply r in f.getMessages()) {
 				dbStatic.insertMessage(r)
 			}
 		}
 	}
 
-	if (f.hasChanged()) {			
+	if (f.hasChanged()) {
 		dbStatic.updateForum(f)
 
 		for(Reply r in f.getMessages()) {
 			if(r.hasChanged()) {
 				dbStatic.updateMessage(r)
 			}
-			
+
 			if(r.isNew()) {
 				dbStatic.insertMessage(r)
 			}
