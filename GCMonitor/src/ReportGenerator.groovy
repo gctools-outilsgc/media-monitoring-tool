@@ -1,21 +1,3 @@
-Skip to content
-This repository
-Search
-Pull requests
-Issues
-Marketplace
-Explore
- @gpatrick2
-Sign out
-10
-0 0 gctools-outilsgc/media-monitoring-tool
- Code  Issues 0  Pull requests 0  Projects 0  Wiki  Insights
-media-monitoring-tool/GCMonitor/src/ReportGenerator.groovy
-e277b4e  3 hours ago
-@HoussamBedja HoussamBedja AddGroup Script added
-@gpatrick2 @HoussamBedja
-
-116 lines (91 sloc)  2.77 KB
 /*
  *
  * Class that generates reports at the end of the script
