@@ -20,7 +20,7 @@ In order to run the script you will need to import a couple jar files to the pro
 
   - The groups table holds a list of all groups that are being monitored. The list is determined by querying GCCollab/GCConnex for groups with descriptions or titles that match keywords with high likelihood of mentioning topics to the related subject which is being monitored
 
-    - Groups can be entered manually. Importing a group manually will generate a new report based on information in the group from the groups creation, each following time the script runs only the last 24h will be checked
+    - Groups can be entered manually. Importing a group manually will generate a new report based on information in the group from the groups creation, each following time the script runs only the last 24h will be checked **(NOT YET IMPLEMENTED)**
 
   - The forums table (Discussions, Blogs, Events...) and the messages table holds data on items from groups which have already been monitored
 
