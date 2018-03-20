@@ -74,7 +74,7 @@ import java.time.format.DateTimeFormatter
 	}
 	
 	//Generate report from a new group
-	public generateGroupReport(Group g) {
+	public static generateGroupReport(Group g) {
 		def date = new Date()
 		def groupName = g.getName().replaceAll(" ", "_")
 		def fileName = groupName + date.getTime() + ".csv"
