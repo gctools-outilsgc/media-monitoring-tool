@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.util.ArrayList
+import java.text.SimpleDateFormat
 
 import groovy.json.JsonSlurper
 
@@ -7,6 +8,9 @@ import groovy.json.JsonSlurper
 
 def groupTitle;
 userInfo = getUserInfo() //Global variable holding user info
+dbStatic = new GCCollabDB("gc.db") //Database
+
+
 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 print("Please enter the group title: ")
 groupTitle = reader.readLine();
@@ -18,18 +22,26 @@ groupTitle = reader.readLine();
 
 Group newGroup = addNewGroup(groupTitle);
 if(newGroup) {
-	ReportGenerator.generateGroupReport(newGroup);
+	addForums(newGroup);
+	if(!dbStatic.hasGroup(newGroup)) {
+		dbStatic.insertGroup(newGroup)
+		ReportGenerator.generateGroupReport(newGroup);
+	} else {
+		println("The group already exists in the database!")
+	}
+	
 } else {
 	println("The group is not found!")
 }
 
-
+//Closing the databases
+dbStatic.close()
 
 
 /*--------------------------------------FUNCTIONS-----------------------------------------------*/
 
 public Group addNewGroup(String groupTitle) {
-
+	
 	def parser = new JsonSlurper()
 	def post
 	def postRC
@@ -40,10 +52,10 @@ public Group addNewGroup(String groupTitle) {
 	def value
 	def g
 
-
-	query = groupTitle.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%27");
+	
+	query = groupTitle.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%2C");	
 	println("Your group title is: " + query);
-
+		
 	try {
 	url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
 	println("URL: " + url)
@@ -58,7 +70,7 @@ public Group addNewGroup(String groupTitle) {
 		post.setDoOutput(true)
 		postRC = post.getResponseCode()
 	}
-
+	
 	if (postRC == 200) {
 		responseString = post.getInputStream().getText()
 		response = parser.parseText(responseString)
@@ -84,12 +96,12 @@ public Group addNewGroup(String groupTitle) {
 //Build user information from file
 public UserInfo getUserInfo() {
 	def br = new BufferedReader(new FileReader("userInfo.txt"))
-
+	
 	def line = br.readLine()
 
 	String[] tokenize = line.split(",")
 	def user = new UserInfo(tokenize[0],tokenize[1])
-
+	
 	br.close()
 
 	return user
@@ -98,8 +110,7 @@ public UserInfo getUserInfo() {
 
 
 //get Forums from a specific Group
-public ArrayList<Forum> getForums(Group g) {
-	def list = new ArrayList<Forum>()
+public void addForums(Group g) {
 	def cmd = new ArrayList<String>()
 
 	def parser = new JsonSlurper()
@@ -147,45 +158,27 @@ public ArrayList<Forum> getForums(Group g) {
 			if(s.equals("discussion")) {
 				for(def i = 0; i<response.result.size();i++) {
 					f = new Discussion(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
-
-					if(getTimestamp(response.result.get(i).time_created) > timestamp) {
-						f.notifyNew()
-					} else if(getTimestamp(response.result.get(i).time_updated) > timestamp) {
-						f.notifyOfChange()
-					}
-
 					getMessages(f,response.result.get(i).replies)
-					list.add(f)
+					f.sanitize();
+					g.addForum(f);
 				}
 			}
 
 			if(s.equals("blog")) {
 				for(def i = 0; i<response.result.size();i++) {
 					f = new Blog(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
-
-					if(getTimestamp(response.result.get(i).time_created) > timestamp) {
-						f.notifyNew()
-					} else if(getTimestamp(response.result.get(i).time_updated) > timestamp) {
-						f.notifyOfChange()
-					}
-
 					getMessages(f,response.result.get(i).replies)
-					list.add(f)
+					f.sanitize();
+					g.addForum(f);
 				}
 			}
 
 			if(s.equals("event")) {
 				for(def i = 0; i<response.result.size();i++) {
 					f = new Event(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
-
-					if(getTimestamp(response.result.get(i).time_created) > timestamp) {
-						f.notifyNew()
-					} else if(getTimestamp(response.result.get(i).time_updated) > timestamp) {
-						f.notifyOfChange()
-					}
-
 					getMessages(f,response.result.get(i).replies)
-					list.add(f)
+					f.sanitize();
+					g.addForum(f);
 				}
 			}
 		} else {
@@ -194,5 +187,31 @@ public ArrayList<Forum> getForums(Group g) {
 		
 		postRC = null
 	}
-	return list
 }
+
+
+//Returns long value representation of a date object parsed from a string parsed from the API results
+public long getTimestamp(String s) {
+	def date
+	def dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+
+	date = dateFormat.parse(s)
+
+	return date.getTime()
+}
+
+
+
+public void getMessages(Forum f, ArrayList<String> replies) {
+	def reply
+	
+	if(replies != null) {
+		for(def i=0;i<replies.size();i++) {
+			reply = new Reply(f,replies.get(i).guid, replies.get(i).description, new URL(replies.get(i).url),getTimestamp(replies.get(i).time_updated))
+			f.addMessage(reply)
+		}
+	}
+}
+
+
+
