@@ -22,9 +22,9 @@ groupTitle = reader.readLine();
 
 Group newGroup = addNewGroup(groupTitle);
 if(newGroup) {
-	addForums(newGroup);
 	if(!dbStatic.hasGroup(newGroup)) {
-		dbStatic.insertGroup(newGroup)
+		addForums(newGroup);
+		dbStatic.insertGroup(newGroup);
 		ReportGenerator.generateGroupReport(newGroup);
 	} else {
 		println("The group already exists in the database!")
@@ -159,8 +159,12 @@ public void addForums(Group g) {
 				for(def i = 0; i<response.result.size();i++) {
 					f = new Discussion(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
 					getMessages(f,response.result.get(i).replies)
+					for(Reply r in f.getMessages()) {
+						dbStatic.insertMessage(r);
+					}
 					f.sanitize();
 					g.addForum(f);
+					dbStatic.insertForum(f,"Discussion");
 				}
 			}
 
@@ -170,6 +174,7 @@ public void addForums(Group g) {
 					getMessages(f,response.result.get(i).replies)
 					f.sanitize();
 					g.addForum(f);
+					dbStatic.insertForum(f,"Blog");
 				}
 			}
 
@@ -179,6 +184,7 @@ public void addForums(Group g) {
 					getMessages(f,response.result.get(i).replies)
 					f.sanitize();
 					g.addForum(f);
+					dbStatic.insertForum(f,"Event");
 				}
 			}
 		} else {
