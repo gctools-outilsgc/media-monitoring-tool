@@ -1,4 +1,4 @@
-import java.io.BufferedReader;
+import java.io.BufferedReader
 import java.util.ArrayList
 import java.text.SimpleDateFormat
 
@@ -6,26 +6,26 @@ import groovy.json.JsonSlurper
 
 /*--------------------------------------SCRIPT-----------------------------------------------*/
 
-def groupTitle;
+def groupTitle
 userInfo = getUserInfo() //Global variable holding user info
 dbStatic = new GCCollabDB("gc.db") //Database
 
 
-BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))
 print("Please enter the group title: ")
-groupTitle = reader.readLine();
+groupTitle = reader.readLine()
 //while(!groupTitle.isInteger()) {
-//	print("Please enter a valid group ID: ");
-//	groupTitle = reader.readLine();
+//	print("Please enter a valid group ID: ")
+//	groupTitle = reader.readLine()
 //}
 
 
-Group newGroup = addNewGroup(groupTitle);
+Group newGroup = addNewGroup(groupTitle)
 if(newGroup) {
 	if(!dbStatic.hasGroup(newGroup)) {
-		addForums(newGroup);
-		dbStatic.insertGroup(newGroup);
-		ReportGenerator.generateGroupReport(newGroup);
+		addForums(newGroup)
+		dbStatic.insertGroup(newGroup)
+		ReportGenerator.generateGroupReport(newGroup)
 	} else {
 		println("The group already exists in the database!")
 	}
@@ -53,18 +53,18 @@ public Group addNewGroup(String groupTitle) {
 	def g
 
 	
-	query = groupTitle.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%2C");	
-	println("Your group title is: " + query);
+	query = groupTitle.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%2C")	
+	println("Your group title is: " + query)
 		
 	try {
-	url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
+	url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query)
 	println("URL: " + url)
 	post = url.openConnection()
 	post.requestMethod = 'POST'
 	post.setDoOutput(true)
 	postRC = post.getResponseCode()
 	} catch(java.net.ConnectException e) {
-		url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
+		url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query)
 		post = url.openConnection()
 		post.requestMethod = 'POST'
 		post.setDoOutput(true)
@@ -74,21 +74,21 @@ public Group addNewGroup(String groupTitle) {
 	if (postRC == 200) {
 		responseString = post.getInputStream().getText()
 		response = parser.parseText(responseString)
-		println(response);
+		println(response)
 		for(def i = 0; i<response.result.size(); i++) {
-			g = new Group(response.result.get(i).guid, response.result.get(i).name, new URL(response.result.get(i).url));
-			println("API Title: "+ g.getName());
-			println("Inserted title: " + groupTitle);
+			g = new Group(response.result.get(i).guid, response.result.get(i).name, new URL(response.result.get(i).url))
+			println("API Title: "+ g.getName())
+			println("Inserted title: " + groupTitle)
 			if (g.getName().equals(groupTitle)) {
-				break;
+				break
 			} else {
-				g = null;
+				g = null
 			}
 		}
 	} else {
 			println("This is error code: " + postRC)
 	}
-	return g;
+	return g
 }
 
 
@@ -160,11 +160,11 @@ public void addForums(Group g) {
 					f = new Discussion(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
 					getMessages(f,response.result.get(i).replies)
 					for(Reply r in f.getMessages()) {
-						dbStatic.insertMessage(r);
+						dbStatic.insertMessage(r)
 					}
-					f.sanitize();
-					g.addForum(f);
-					dbStatic.insertForum(f,"Discussion");
+					f.sanitize()
+					g.addForum(f)
+					dbStatic.insertForum(f,"Discussion")
 				}
 			}
 
@@ -172,9 +172,9 @@ public void addForums(Group g) {
 				for(def i = 0; i<response.result.size();i++) {
 					f = new Blog(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
 					getMessages(f,response.result.get(i).replies)
-					f.sanitize();
-					g.addForum(f);
-					dbStatic.insertForum(f,"Blog");
+					f.sanitize()
+					g.addForum(f)
+					dbStatic.insertForum(f,"Blog")
 				}
 			}
 
@@ -182,9 +182,9 @@ public void addForums(Group g) {
 				for(def i = 0; i<response.result.size();i++) {
 					f = new Event(response.result.get(i).guid, g, new URL(response.result.get(i).url), response.result.get(i).description, response.result.get(i).title,getTimestamp(response.result.get(i).time_updated.toString()))
 					getMessages(f,response.result.get(i).replies)
-					f.sanitize();
-					g.addForum(f);
-					dbStatic.insertForum(f,"Event");
+					f.sanitize()
+					g.addForum(f)
+					dbStatic.insertForum(f,"Event")
 				}
 			}
 		} else {
