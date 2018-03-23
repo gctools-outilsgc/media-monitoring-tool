@@ -12,21 +12,26 @@
 import groovy.json.JsonSlurper
 import java.net.URL
 import java.util.ArrayList
+import java.util.Set
 
 public class Group{
 	private int GUID
 	private URL link
 	private String name
+	private String description
 	private ArrayList<Forum> forums
 	private ArrayList<String> tags
+	private Set<String> keywords
+	private def sanitizer = new Sanitizer()
 
-	public Group(int g, String n, URL u) {
+	public Group(int g, String n, String d, URL u) {
 		GUID = g
 		link = u
 		name = n
+		description = d
 		forums = new ArrayList<Forum>()
 		tags = new ArrayList<String>()
-
+		keywords = new HashSet<String>()
 		sanitize()
 	}
 
@@ -40,6 +45,10 @@ public class Group{
 
 	public String getName() {
 		return name
+	}
+	
+	public String getDescription() {
+		return description
 	}
 
 	public void addForum(Forum f) {
@@ -160,18 +169,15 @@ public class Group{
 	}
 
 	public void sanitize() {
-		def parser = new JsonSlurper()
-
-		if(name == null) {
-			return
-		}
-
-		if (name) {
-			if(name.contains("\"en\":\"")) {
-				def titleJson = parser.parseText(name);
-				name = titleJson.en;
-
-			}
-		}
+		description = sanitizer.sanitize(description)
+		name = sanitizer.sanitize(name)
+	}
+	
+	public Set<String> getKeywords() {
+		return keywords
+	}
+	
+	public void addKeyword(String s) {
+		keywords.add(s)
 	}
 }

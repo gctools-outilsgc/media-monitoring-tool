@@ -25,13 +25,13 @@ public class GCCollabDB {
 
 	public void insertGroup(Group g){
 		if(!hasGroup(g)) {
-			dbInstance.execute("insert into Groups(groupID, link, name) values(?, ?, ?)", [g.getID(), g.getLink().toString(), sanitize(g.getName())])
+			dbInstance.execute("insert into Groups(groupID, link, name, description, keywords) values(?, ?, ?, ?, ?)", [g.getID(), g.getLink().toString(), sanitize(g.getName()), g.getDescription(), g.getKeywords()])
 		}
 	}
 
 	public void insertForum(Forum f, String type){
 		if(!hasForum(f)) {
-			dbInstance.execute("insert into Forum(forumID, ownerID, link, score, description, title, type, timestamp) values(?, ?, ?, ?, ?, ?, ?, ?)", [f.getID(), f.getOwner().getID(), f.getLink().toString(), f.getScore(), sanitize(f.getDescription()), sanitize(f.getTitle()), type, f.getTimestamp()])
+			dbInstance.execute("insert into Forum(forumID, ownerID, link, score, description, title, type, timestamp, keywords) values(?, ?, ?, ?, ?, ?, ?, ?, ?)", [f.getID(), f.getOwner().getID(), f.getLink().toString(), f.getScore(), sanitize(f.getDescription()), sanitize(f.getTitle()), type, f.getTimestamp(), f.getKeywords()])
 		}
 
 		if(!f.getClass().equals(Wirepost.class)) {
@@ -90,8 +90,9 @@ public class GCCollabDB {
 		def title = sanitize(f.getTitle())
 		def score = f.getScore()
 		def forumID = f.getID()
-
-		dbInstance.execute("update forum set description ='"+ description +"', timestamp='"+ timestamp +"', score='"+ score +"', title='"+ title  +"' where forumID='"+ forumID +"'")
+		def keywords = f.getKeywords()
+		
+		dbInstance.execute("update forum set description ='"+ description +"', timestamp='"+ timestamp +"', score='"+ score +"', title='"+ title  +"' where forumID='"+ forumID +"'" + "' where keywords='" + keywords + "'")
 
 		for(Reply r in f.getMessages()) {
 			if(r.hasChanged()) {
@@ -129,23 +130,24 @@ public class GCCollabDB {
 			def type = row.getProperty("type")
 			def timestamp = row.getProperty("timestamp")
 			def owner = getOwner(ownerID)
+			def keywords = row.getProperty("keywords")
 
 			def f
 
 			if(type == "Discussion") {
-				f = new Discussion(forumID, owner, link, description, title, timestamp)
+				f = new Discussion(forumID, owner, link, description, title, timestamp, keywords)
 			}
 
 			if(type == "Blog") {
-				f = new Blog(forumID, owner, link, description, title, timestamp)
+				f = new Blog(forumID, owner, link, description, title, timestamp, keywords)
 			}
 
 			if(type == "File") {
-				f = new Files(forumID, owner, link, description, title, timestamp)
+				f = new Files(forumID, owner, link, description, title, timestamp, keywords)
 			}
 
 			if(type == "Document") {
-				f = new Document(forumID, owner, link, description, title, timestamp)
+				f = new Document(forumID, owner, link, description, title, timestamp, keywords)
 			}
 
 			if(type == "Event") {
@@ -245,7 +247,8 @@ public class GCCollabDB {
 		dbInstance.rows("select * from groups where groupID='"+ ownerID +"'").each {
 			def link = new URL(it.getProperty("link"))
 			def name = it.getProperty("name")
-			g = new Group(ownerID, name, link)
+			def description = it.getProperty("description")
+			g = new Group(ownerID, name, description, link)
 		}
 
 		return g
@@ -259,7 +262,8 @@ public class GCCollabDB {
 			URL link = new URL(it.getProperty("link"))
 			def name = it.getProperty("name")
 			def GUID = it.getProperty("groupID")
-			g = new Group(GUID,name,link)
+			def description = it.getProperty("description")
+			g = new Group(GUID,name,description,link)
 			list.add(g)
 		}
 
@@ -343,7 +347,7 @@ public class GCCollabDB {
 	//TODO add other reserved characters to the list of characters to be removed
 	public String sanitize(String s) {
 		if(s) {
-			return s.replaceAll("'","''")
+			return s.replaceAll("'","\'")
 		}
 	}
 }

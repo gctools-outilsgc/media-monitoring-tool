@@ -35,6 +35,8 @@ public class Forum {
 	private boolean hasChanged
 	private boolean isNew
 	private ArrayList<Reply> deletedMessages
+	private HashSet<String> keywords
+	private def sanitizer = new Sanitizer()
 
 	public Forum(int g, Group group, URL u, String d, String t, long ts) {
 		GUID = g
@@ -46,8 +48,11 @@ public class Forum {
 		messages = new ArrayList<Reply>()
 		tags = new ArrayList<String>()
 		deletedMessages = new ArrayList<Reply>()
+		keywords = new ArrayList<String>()
 		hasChanged = false
-		isNew = false
+		isNew = false		
+		
+		sanitize()
 	}
 
 	public int getID() {
@@ -97,6 +102,7 @@ public class Forum {
 
 	public void setDescription(String d) {
 		description = d
+		sanitize()
 	}
 
 	public String getDescription() {
@@ -126,6 +132,7 @@ public class Forum {
 
 	public void setTitle(String t) {
 		title = t
+		sanitize()
 	}
 
 	//To be changed once timestamp is decided
@@ -139,75 +146,9 @@ public class Forum {
 
 	//Cleans up the output from the API into a human readable format
 	public void sanitize() {
-		sanitizeTitle()
-		sanitizeMessages()
-		sanitizeDescription()
-	}
-
-	public void sanitizeTitle() {
-		def parser = new JsonSlurper()
-		if(title == null) {
-			return
-		}
-
-		if (title) {
-			if(title.contains("\"en\":\"")) {
-				def titleJson = parser.parseText(title);
-				title = titleJson.en;
-
-			}
-		}
-
-		def dom = Jsoup.parse(title)
-
-		//Add list of special characters to sanitize
-		title = dom.text().replaceAll("\\\\u2013", "-");
-		title = title.replaceAll("\\\\u2018","�")
-		title = title.replaceAll("\\\\u201",'�')
-		title = title.replaceAll("\\\\u2019","�")
-		title = title.replaceAll("\\\\u00b2","�")
-	}
-
-	public void sanitizeMessages() {
-		for(Reply r in messages) {
-			r.sanitizeMessage()
-		}
-	}
-
-	public void sanitizeDescription() {
-		def parser = new JsonSlurper()
-		if(description == null) {
-			return
-		}
-
-		if (description && description.indexOf("\"en\":\"")) {
-			if (description.contains("\"en\":\"")) {
-				def descriptionJson = parser.parseText(description);
-
-				description = descriptionJson.en;
-			}
-			def dom = Jsoup.parse(description);
-			description = dom.text();
-
-			//Add list of special characters to sanitize
-			description = description.replaceAll("<\\\\/p>","")
-			description = description.replaceAll("<\\\\/em>","")
-			description = description.replaceAll("<\\\\/span>", "")
-			description = description.replaceAll("<\\\\/div>","")
-			description = description.replaceAll("<\\\\/li>","")
-			description = description.replaceAll("<\\\\/h1>","")
-			description = description.replaceAll("<\\\\/ul>","")
-			description = description.replaceAll("<\\\\/blockquote>","")
-			description = description.replaceAll("<\\\\/ins>","")
-			description = description.replaceAll("<\\\\/a>","")
-			description = description.replaceAll("<\\\\/b>","")
-			description = description.replaceAll("<\\\\/strong>","")
-			description = description.replaceAll("<\\\\/sup>", "")
-			description = description.replaceAll("\\\\r","")
-			description = description.replaceAll("\\\\n","")
-			description = description.replaceAll("\\\\t","")
-		}
-	}
+		title = sanitizer.sanitize(title)
+		description = sanitizer.sanitize(description)
+	}	
 
 	//hasChanged and isNew values are flags used to determine if a forum has changed or is new
 	public void notifyOfChange() {
@@ -256,5 +197,13 @@ public class Forum {
 				deletedMessages.add(r)
 			}
 		}
+	}
+	
+	public Set<String> getKeywords() {
+		return keywords
+	}
+	
+	public void addKeyword(String s) {
+		keywords.add(s)
 	}
 }

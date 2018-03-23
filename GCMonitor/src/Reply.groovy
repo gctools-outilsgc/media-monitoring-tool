@@ -27,13 +27,15 @@ public class Reply {
 	private long timestamp
 	private boolean hasChanged
 	private boolean isNew
-
+	private def sanitizer = new Sanitizer()
+	
 	public Reply(Forum f, String m, long ts) {
 		forum = f
 		message = m
 		timestamp = ts
 		hasChanged = false
 		isNew = false
+		sanitize()
 	}
 
 	public Reply(Forum f, int g, String m, URL l, long ts) {
@@ -46,6 +48,7 @@ public class Reply {
 		timestamp = ts
 		hasChanged = false
 		isNew = false
+		sanitize()
 	}
 
 	public void setScore(int s) {
@@ -105,33 +108,8 @@ public class Reply {
 		return isNew
 	}
 
-	//Clean up the message, make it readable by the script/person
-	public void sanitizeMessage() {
-		if (message && message.contains("\"en\":\"")) {
-			def messageJson = parser.parseText(message);
-			message = messageJson.en;
-		}
-		def dom = Jsoup.parse(message);
-
-		//Add list of special characters to sanitize
-		message = dom.text().replaceAll("\u2013", "-");
-		message = message.replaceAll("<\\\\/p>","")
-		message = message.replaceAll("<\\\\/em>","")
-		message = message.replaceAll("<\\\\/span>", "")
-		message = message.replaceAll("<\\\\/div>","")
-		message = message.replaceAll("<\\\\/li>","")
-		message = message.replaceAll("<\\\\/h1>","")
-		message = message.replaceAll("<\\\\/ul>","")
-		message = message.replaceAll("<\\\\/blockquote>","")
-		message = message.replaceAll("<\\\\/ins>","")
-		message = message.replaceAll("<\\\\/a>","")
-		message = message.replaceAll("<\\\\/b>","")
-		message = message.replaceAll("<\\\\/strong>","")
-		message = message.replaceAll("\\\\r","")
-		message = message.replaceAll("\\\\n","")
-		message = message.replaceAll("\\\\t","")
-		message = message.replaceAll("<\\\\/sup>", "")
-		message = message.replaceAll("&nbsp;", " ")
+	public void sanitize() {
+		message = sanitizer.sanitize(message)
 	}
 
 	public void setMessage(String m) {

@@ -1,5 +1,6 @@
 import java.io.BufferedReader
 import java.util.ArrayList
+import java.util.TreeMap
 import java.text.SimpleDateFormat
 
 import groovy.json.JsonSlurper
@@ -9,7 +10,7 @@ import groovy.json.JsonSlurper
 def groupTitle
 userInfo = getUserInfo() //Global variable holding user info
 dbStatic = new GCCollabDB("gc.db") //Database
-
+heuristicValues = dbStatic.setScore()
 
 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))
 print("Please enter the group title: ")
@@ -21,9 +22,41 @@ groupTitle = reader.readLine()
 
 
 Group newGroup = addNewGroup(groupTitle)
+getKeywords(newGroup)
+def score = 0
+
+
 if(newGroup) {
 	if(!dbStatic.hasGroup(newGroup)) {
 		addForums(newGroup)
+		
+		for(Forum f in newGroup.getForums()) {
+		
+			getKeywords(f)
+				
+			for(Reply r in f.getMessages()) {
+				for(String s in getSentences(r.getMessage())) {
+					score += scoreSentence(s, heuristicValues)
+				}
+		
+				r.setScore(score)
+		
+				score = 0
+			}
+			
+			for(String s in getSentences(f.getDescription())) {
+				score += scoreSentence(s,heuristicValues)
+			}
+			
+			for(String s in getSentences(f.getTitle())) {
+				score += scoreSentence(s,heuristicValues)
+			}
+			
+			f.setScore(score)
+			
+			println("This is f.getScore(): " + f.getScore())
+		}
+		
 		dbStatic.insertGroup(newGroup)
 		ReportGenerator.generateGroupReport(newGroup)
 	} else {
@@ -64,6 +97,7 @@ public Group addNewGroup(String groupTitle) {
 	post.setDoOutput(true)
 	postRC = post.getResponseCode()
 	} catch(java.net.ConnectException e) {
+		println("Connection timeout detected, if this problem persist try again with a different connection")
 		url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query)
 		post = url.openConnection()
 		post.requestMethod = 'POST'
@@ -219,5 +253,102 @@ public void getMessages(Forum f, ArrayList<String> replies) {
 	}
 }
 
+public void getKeywords(Forum f) {
+	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
+		println("Looking at keyword: " + entry.getKey() + " inside forums")
+		
+		if(f.getDescription().contains(entry.getKey())) {
+			f.addKeyword(entry.getKey())
+		}
+		
+		if(f.getTitle().contains(entry.getKey())) {
+			f.addKeyword(entry.getKey())
+		}
+		
+		for(Reply r in f.getMessages()) {
+			if(r.getMessage().contains(entry.getKey())) {
+				f.addKeyword(entry.getKey())
+			}
+		}
+	}
+}
+public void getKeywords(Group g) {
+	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
+		println("Looking at keyword: " + entry.getKey() + " inside groups")
+		
+		if(g.getName().contains(entry.getKey())) {
+			g.addKeyword(entry.getKey())
+		}
+	}
+	
+	for(Forum f in g.getForums()) {
+		getKeywords(f)
+	}
+}
+
+public ArrayList<String> getSentences(String message) {
+	
+		if(message == null) {//TEMPORARY
+	
+			message = ""
+		}
+	
+		return message.split('[\\.\\?\\!]')//Add \\; later if needed.(Message needs to be sanitized first
+	}
+	
+	
+	//Scores a sentence based on heuristic values
+	public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
+		def score = 0
+		def ArrayList<String> splitString = s.split(" +")//Split the string into words
+		def ArrayList<String> keywordCombinations = new ArrayList<String>()//Keep track of every instance of a keyword combination found
+		def ArrayList<String> keywords = new ArrayList<String>()//Keep track of every instance of a keyword found
+		def tmp//Used as temporary string to find keyword combinations
+		def tmpScore// Used to calculate when two keywords combinations are found in the same sentence
+	
+		//Check single words
+		for(def i=0;i<splitString.size();i++) {
+			if(heuristicValues.containsKey(splitString.get(i))) {
+				score += heuristicValues.get(splitString.get(i))
+				keywords.add(splitString.get(i))
+			}
+		}
+	
+		//Check two words together
+		for(def i=0;i<splitString.size()-1;i++) {
+			tmp = splitString.get(i) + " " + splitString.get(i+1)
+	
+			if(heuristicValues.containsKey(tmp)) {
+				score += heuristicValues.get(tmp)
+				keywordCombinations.add(tmp)
+			}
+		}
+	
+		//Check for three words together
+		for(def i=0;i<splitString.size()-2;i++) {
+			tmp = splitString.get(i) + " " + splitString.get(i+1) + " " + splitString.get(i+2)
+	
+			if(heuristicValues.containsKey(tmp)) {
+				score += heuristicValues.get(tmp)
+				keywordCombinations.add(tmp)
+			}
+		}
+	
+		//Multiply keywords and keyword combination values
+		for(k in keywords) {
+			for(c in keywordCombinations) {
+				score += heuristicValues.get(k) * heuristicValues.get(c)
+			}
+		}
+	
+		//Add multiplied values of combined values for keyword combination
+		for(def i=0;i<keywordCombinations.size()-1;i++) {
+			for(def j = i+1;j<keywordCombinations.size();j++) {
+				tmpScore = (heuristicValues.get(keywordCombinations.get(i)) + heuristicValues.get(keywordCombinations.get(j)))
+				score += tmpScore * tmpScore
+			}
+		}
+		return score
+	}
 
 

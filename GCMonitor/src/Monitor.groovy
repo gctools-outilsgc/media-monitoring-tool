@@ -4,7 +4,7 @@
  *
  * How the script runs:
  * 	- Get the heuristic values of keywords from the database
- *  - Update the list of groups to monitor
+ *  - Update the list of groups to monitor and update the database
  *  - Get the updated list of groups from the database and request Discussion, Events and Blogs from each group
  * 	- For each discussion, event or blog, look if either is new, has been updated or has a new/updated reply and mark them
  * 	- (Re)Calculate the score for each forum and message which was identified as new or having changed
@@ -22,6 +22,7 @@ import java.util.ArrayList
 import java.util.HashSet
 import java.util.TreeMap
 import java.util.Date
+import java.util.regex.Pattern
 import java.io.BufferedReader
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -39,6 +40,44 @@ public ArrayList<String> getSentences(String message) {
 	}
 
 	return message.split('[\\.\\?\\!]')//Add \\; later if needed.(Message needs to be sanitized first
+}
+
+public void getKeywords(Forum f) {	
+	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
+
+		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(f.getTitle()).find()) {
+			println("Adding keyword: " + entry.getKey() + " to forum: " + f.getID())
+			f.addKeyword(entry.getKey())
+		}
+		
+		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(f.getDescription()).find()) {
+			println("Adding keyword: " + entry.getKey() + " to forum: " + f.getID())
+			f.addKeyword(entry.getKey())
+		}
+		
+		for(Reply r in f.getMessages()) {
+			if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(r.getMessage()).find()) {
+				println("Adding keyword: " + entry.getKey() + " to forum: " + f.getID())
+				f.addKeyword(entry.getKey())
+			}
+		}
+	}	
+}
+
+public void getKeywords(Group g) {
+	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
+		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(g.getName()).find()) {
+			g.addKeyword(entry.getKey())
+		}
+		
+		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(g.getDescription()).find()) {
+			g.addKeyword(entry.getKey())
+		}
+	}
+	
+	for(Forum f in g.getForums()) {
+		getKeywords(f)
+	}
 }
 
 //Scores a sentence based on heuristic values
@@ -131,13 +170,12 @@ public void updateGroupList() {
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
 			} catch(java.net.ConnectException e) {
-				println("A connection timeout error has been detected. If this error perciste, please try with a better connection")
+				println("A connection timeout error has been detected. If this error persist, please try with a better connection")
 				url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query);
 				post = url.openConnection()
 				post.requestMethod = 'POST'
 				post.setDoOutput(true)
 				postRC = post.getResponseCode()
-				continue
 			}
 
 			if (postRC == 200) {
@@ -145,11 +183,9 @@ public void updateGroupList() {
 				response = parser.parseText(responseString)
 
 				for(def i = 0; i<response.result.size(); i++) {
-					if (!dbStatic.hasGroup(response.result.get(i).guid)) {
-						g = new Group(response.result.get(i).guid, response.result.get(i).name, new URL(response.result.get(i).url));
-						println("Adding new Group: " + g.getID());
-						dbStatic.insertGroup(g);
-					}
+					g = new Group(response.result.get(i).guid, response.result.get(i).name, response.result.get(i).description, new URL(response.result.get(i).url));
+					getKeywords(g)
+					dbStatic.insertGroup(g);
 				}
 			} else {
 					println("This is error code: " + postRC)
@@ -188,13 +224,12 @@ public ArrayList<Forum> getForums() {
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
 			} catch(java.net.ConnectException e) {
-				println("A connection timeout error has been detected. If this error perciste, please try with a better connection")
+				println("A connection timeout error has been detected. If this error persist, please try with a better connection")
 				url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=" + s + "&group=" + id)
 				post = url.openConnection()
 				post.requestMethod = 'POST'
 				post.setDoOutput(true)
 				postRC = post.getResponseCode()
-				continue
 			}
 
 			//FOR TESTING
@@ -294,7 +329,7 @@ public HashSet<Wirepost> getWireposts() {
 	def response
 	def url
 	def offset = 0
-	def group = new Group(1,"wirepost",new URL("https://gccollab.ca/newsfeed/"))//Fake group for wireposts
+	def group = new Group(1,"wirepost","wirepost group",new URL("https://gccollab.ca/newsfeed/"))//Fake group for wireposts
 	def parser = new JsonSlurper()
 	def time = 0
 
@@ -306,13 +341,12 @@ public HashSet<Wirepost> getWireposts() {
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
 		} catch (java.net.ConnectException e) {
-			println("A connection timeout error has been detected. If this error perciste, please try with a better connection")
+			println("A connection timeout error has been detected. If this error persist, please try with a better connection")
 			url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=wire&limit=25&offset=" + offset)
 			post = url.openConnection()
 			post.requestMethod = 'POST'
 			post.setDoOutput(true)
 			postRC = post.getResponseCode()
-			continue
 		}
 
 		if(postRC == 200) {
@@ -324,10 +358,17 @@ public HashSet<Wirepost> getWireposts() {
 					return wireposts
 				}
 
+				println("This is GUID: " + response.result.get(i).guid)
+				
 				wire = new Wirepost(response.result.get(i).guid, group, new URL(response.result.get(i).url),response.result.get(i).description,response.result.get(i).title,getTimestamp(response.result.get(i).time_created))
+				wire.notifyNew()
 				wireposts.add(wire)
 
-				time = response.result.get(i).time_updated
+				time = getTimestamp(response.result.get(i).time_updated)
+				
+				if(timestampWire > time) {
+					return wireposts
+				}
 			}
 		}
 
@@ -352,7 +393,6 @@ public ArrayList<Reply> findDeletedMessages(Forum f) {
 	return deletedMessages
 }
 
-//Build user information from file
 public UserInfo getUserInfo() {
 	def br = new BufferedReader(new FileReader("userInfo.txt"))
 	def line = br.readLine()
@@ -381,7 +421,7 @@ if(!dbStatic.isEmpty()) {
 }
 
 //Temporarily removed during testing, will be added later
-//updateGroupList();
+updateGroupList();
 listGroups = dbStatic.getGroups() //List of all groups from the database
 
 println("Getting all forums from API")
@@ -417,10 +457,11 @@ println("(Re)calculation scores for forums")
 
 //Check every forum/message that has been changed and recalculate the score
 //Calculate the score of every new forum found
-//Maybe change description into a message(First message in the list?)
 for(Forum f in liveList) {
 	def score = 0
 
+	getKeywords(f)
+	
 	if(f.getClass().equals(Wirepost.class)) {
 		for(String s in f.getDescription()) {
 			score += scoreSentence(s,heuristicValues)
@@ -448,6 +489,10 @@ for(Forum f in liveList) {
 		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s, heuristicValues)
 		}
+		
+		for(String s in getSentences(f.getTitle())) {
+			score += scoreSentence(s,heuristicValues)
+		}
 
 		f.setScore(score)
 		score = 0
@@ -455,43 +500,24 @@ for(Forum f in liveList) {
 
 	if(f.hasChanged()) {
 		for(Reply r in f.getMessages()) {
-			if(r.hasChanged() || r.isNew()) {
-				for(String s in getSentences(r.getMessage())) {
-					score += scoreSentence(s, heuristicValues)
-				}
-
-				r.setScore(score)
-				score = 0
+			for(String s in getSentences(r.getMessage())) {
+				score += scoreSentence(s, heuristicValues)
 			}
+
+			r.setScore(score)
+			score = 0			
 		}
 
 		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s, heuristicValues)
 		}
+		
+		for(String s in getSentences(f.getTitle())) {
+			score += scoreSentence(s,heuristicValues)
+		}
 
 		f.setScore(score)
 		score = 0
-	}
-}
-
-println("Creating list for report")
-
-//For report only
-def n = new ArrayList<Forum>()//List of new forums
-def u = new ArrayList<Forum>()//List of updated forums
-def d = new ArrayList<Reply>()//List of deleted messages
-
-for(Forum f in liveList) {
-	if(f.isNew()) {
-		n.add(f)
-	}
-
-	if(f.hasChanged()) {
-		u.add(f)
-	}
-
-	for(Reply r in findDeletedMessages(f)) {
-		d.add(r)
 	}
 }
 
@@ -572,5 +598,5 @@ dbStatic.close()
 println("Producing report")
 
 //Produce report
-def reporter = new ReportGenerator(n,u)
-reporter.generateReport()
+def reporter = new ReportGenerator()
+reporter.generateReport(liveList)

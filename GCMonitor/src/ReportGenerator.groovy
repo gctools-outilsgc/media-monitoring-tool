@@ -23,26 +23,26 @@ import java.time.format.DateTimeFormatter
  */
  
  public class ReportGenerator {
-	private ArrayList<Forum> newForum
-	private ArrayList<Forum> updatedForum
-	
-	public ReportGenerator(ArrayList<Forum> n, ArrayList<Forum> u) {
-		newForum = n
-		updatedForum = u
-	}
-	
-	public generateReport() {
+		
+	public generateReport(ArrayList<Forum> list) {
 		def date = new Date()
-		def type
+		def type,state
 		def fileName = "Monitoring_Report_" + date.getTime() + ".csv"
 		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
 		
-		bw.write("Forum(Score), Link")
-		bw.newLine()		
-		bw.write("New Forums")
+		bw.write("Forum, Type, Score, Link, Keyword Mathcs, New/Updated")
 		bw.newLine()
 		
-		for(Forum f in newForum) {
+		for(Forum f in list) {
+			if(!f.isNew() && !f.hasChanged()) { 
+				continue
+			}
+			
+			if(f.isNew()) {
+				state = "New"
+			} else {
+				state = "Changed"
+			}
 			
 			if(f.getClass().equals(Discussion.class)) {
 				type = "Discussion"
@@ -54,18 +54,13 @@ import java.time.format.DateTimeFormatter
 			
 			if(f.getClass().equals(Event.class)) {
 				type = "Event"
-			}
+			}	
+			
+			if(f.getClass().equals(Wirepost.class)) {
+				type = "Wirepost"
+			}		
 					
-			bw.write(type + ":" + f.getTitle() + "(" + f.getScore() + "), " + f.getLink())
-			bw.newLine()
-		}
-		
-		bw.newLine()
-		bw.write("Updated Forums")
-		bw.newLine()
-				
-		for(Forum f in updatedForum) {
-			bw.write(f.class.toString() + ":" + f.getTitle() + "(" + f.getScore() + "), " + f.getLink())
+			bw.write("\"" + f.getTitle() + "\",\"" + type + "\",\"" + f.getScore() + "\",\"" + f.getLink() + "\",\"" + f.getKeywords() + "\"," + state)
 			bw.newLine()
 		}
 				
@@ -84,12 +79,10 @@ import java.time.format.DateTimeFormatter
 		
 		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
 		
-		bw.writeLine("Group, Link")
-		bw.writeLine(g.getName() + "," + g.getLink())
-		bw.newLine()
-		bw.writeLine("Forum(Score), Type, Link")
-		bw.newLine()
+		bw.writeLine("Group, Group Link, Group Keyword Matchs,Forum, Type, Score, Forum Link, Forum Keyword Matchs")
 	
+		println("This is the size of g.getForums(): " + g.getForums().size())
+		
 		for(Forum f in g.getForums()) {
 			if(f.getClass().equals(Discussion.class)) {
 				type = "Discussion"
@@ -102,44 +95,53 @@ import java.time.format.DateTimeFormatter
 			if(f.getClass().equals(Event.class)) {
 				type = "Event"
 			}
-			bw.writeLine(f.getTitle() + "(" + f.getScore() + ")," + type + "," + f.getLink())
+			
+			bw.write("\"" + g.getName() + "\",\"" + g.getLink() + "\",\"" + g.getKeywords() + "\",\"" + f.getTitle() + "\",\"" + type + "\",\"" + f.getScore() + "\",\"" + f.getLink() + "\",\"" + f.getKeywords() + "\"")
+			bw.newLine()
 		}
 		 
 		bw.close()	
 	}
 
-  public void generateKeywordReport(ArrayList<Group> groups, String k) {
-		def date = new Date()
-		def keyword = k.replaceAll(" ","_")
-		def fileName = keywords +date + ".csv"
-		def type
-		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
-
-
+  public static generateKeywordReport(ArrayList<Group> groups, String k) {
 		for(Group g in groups) {
-			bw.writeLine("Group,Link")
-			bw.writeLine(g.getName() + "," + g.getLink())
-			bw.newLine()
-			bw.writeLine("Forum(Score),Type,Link")
-			bw.newLine()
+			generateGroupReport(g)
+		}
+	}
+	
+	public static reportFromTo(Date t, Date f, GCCollabDB db) {
+		def to = t.getTime()
+		def from = f.getTime()
+		def fileName = "MonitorReport_From_" + f.getTime() + "_to_" + t.getTime() + ".csv"
+		def bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8"));
+		def forums = db.getAllForums()
+		def type
 
-			for(Forum f in g.getForums()) {
-				if(f.getClass().equals(Discussion.class)) {
+		bw.writeLine("Forum, Type, Score, Link, Keyword Matchs")
+		bw.newLine()
+
+		for(Forum fs in forums) {
+			if(fs.getTimestamp() <= to && fs.getTimestamp() >= from) {
+				if(fs.class.equals(Discussion.class)) {
 					type = "Discussion"
 				}
 
-				if(f.getClass().equals(Blog.class)) {
+				if(fs.getClass().equals(Blog.class)) {
 					type = "Blog"
 				}
 
-				if(f.getClass().equals(Event.class)) {
-					type = "Class"
+				if(fs.getClass().equals(Event.class)) {
+					type = "Event"
+				}
+				
+				if(fs.getClass().equals(Wirepost.class)) {
+					type = "Wirepost"
 				}
 
-				bw.writeLine(f.getTitle() + "(" + f.getScore() + ")," + type + "," + f.getLink())
+				bw.newLine()
+				bw.writeLine(fs.getTitle() + "(" + fs.getScore() + ")," + type + "," + fs.getLink())
 			}
 		}
-
 		bw.close()
 	}
 	
