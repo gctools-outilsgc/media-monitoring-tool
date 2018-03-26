@@ -7,26 +7,29 @@ import groovy.json.JsonSlurper
 
 /*--------------------------------------SCRIPT-----------------------------------------------*/
 
-def groupTitle
+def groupURL
 userInfo = getUserInfo() //Global variable holding user info
 dbStatic = new GCCollabDB("gc.db") //Database
 heuristicValues = dbStatic.setScore()
 
 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))
-print("Please enter the group title: ")
-groupTitle = reader.readLine()
-//while(!groupTitle.isInteger()) {
+print("Please enter the group ID: ")
+groupURL = reader.readLine()
+def groupID = getIDfromURL(groupURL);
+println("Fetched groupID: " + groupID);
+//while(!groupID.isInteger()) {
 //	print("Please enter a valid group ID: ")
-//	groupTitle = reader.readLine()
+//	groupID = reader.readLine()
 //}
 
 
-Group newGroup = addNewGroup(groupTitle)
-getKeywords(newGroup)
+Group newGroup = addNewGroup(groupID)
+
 def score = 0
 
 
 if(newGroup) {
+	getKeywords((Group)newGroup)
 	if(!dbStatic.hasGroup(newGroup)) {
 		addForums(newGroup)
 		
@@ -73,7 +76,7 @@ dbStatic.close()
 
 /*--------------------------------------FUNCTIONS-----------------------------------------------*/
 
-public Group addNewGroup(String groupTitle) {
+public Group addNewGroup(String groupID) {
 	
 	def parser = new JsonSlurper()
 	def post
@@ -81,16 +84,12 @@ public Group addNewGroup(String groupTitle) {
 	def responseString
 	def response
 	def url
-	def query
 	def value
 	def g
 
-	
-	query = groupTitle.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%2C")	
-	println("Your group title is: " + query)
 		
 	try {
-	url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query)
+	url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&guid=" + groupID)
 	println("URL: " + url)
 	post = url.openConnection()
 	post.requestMethod = 'POST'
@@ -98,7 +97,7 @@ public Group addNewGroup(String groupTitle) {
 	postRC = post.getResponseCode()
 	} catch(java.net.ConnectException e) {
 		println("Connection timeout detected, if this problem persist try again with a different connection")
-		url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query)
+		url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&guid=" + groupID)
 		post = url.openConnection()
 		post.requestMethod = 'POST'
 		post.setDoOutput(true)
@@ -108,16 +107,11 @@ public Group addNewGroup(String groupTitle) {
 	if (postRC == 200) {
 		responseString = post.getInputStream().getText()
 		response = parser.parseText(responseString)
-		println(response)
-		for(def i = 0; i<response.result.size(); i++) {
-			g = new Group(response.result.get(i).guid, response.result.get(i).name, new URL(response.result.get(i).url))
-			println("API Title: "+ g.getName())
-			println("Inserted title: " + groupTitle)
-			if (g.getName().equals(groupTitle)) {
-				break
-			} else {
-				g = null
-			}
+		println(response)			
+		if (response.result.size() > 0) {
+			g = new Group(response.result.get(0).guid, response.result.get(0).name, response.result.get(0).description, new URL(response.result.get(0).url))
+		} else {
+			g = null
 		}
 	} else {
 			println("This is error code: " + postRC)
@@ -349,6 +343,24 @@ public ArrayList<String> getSentences(String message) {
 			}
 		}
 		return score
+}
+
+
+public String getIDfromURL(String url) {
+	//https://gccollab.ca/groups/profile/6161/gccollab-jobs-marketplace-carrefour-demploi-gccollab-carrefour-demploi-gccollab-gccollab-jobs-marketplace
+	String a = "gccollab.ca/groups/profile/";
+	int index = url.lastIndexOf(a);
+	if (index == -1) {
+		return null;
 	}
+	int adjustedIndex = index + a.length();
+	if (adjustedIndex >= url.length()) {
+		return null;
+	}
+	String sub = url.substring(adjustedIndex);
+	return sub.substring(0, sub.indexOf("/"));
+}
+	
+	
 
 
