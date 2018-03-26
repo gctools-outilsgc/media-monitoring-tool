@@ -39,44 +39,108 @@ public ArrayList<String> getSentences(String message) {
 		message = ""
 	}
 
-	return message.split('[\\.\\?\\!]')//Add \\; later if needed.(Message needs to be sanitized first
-}
-
-public void getKeywords(Forum f) {	
-	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
-
-		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(f.getTitle()).find()) {
-			println("Adding keyword: " + entry.getKey() + " to forum: " + f.getID())
-			f.addKeyword(entry.getKey())
-		}
-		
-		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(f.getDescription()).find()) {
-			println("Adding keyword: " + entry.getKey() + " to forum: " + f.getID())
-			f.addKeyword(entry.getKey())
-		}
-		
-		for(Reply r in f.getMessages()) {
-			if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(r.getMessage()).find()) {
-				println("Adding keyword: " + entry.getKey() + " to forum: " + f.getID())
-				f.addKeyword(entry.getKey())
-			}
-		}
-	}	
+	return message.split('[ //,//.//?//!//://;??//&]')//Add \\; later if needed.(Message needs to be sanitized first
 }
 
 public void getKeywords(Group g) {
-	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
-		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(g.getName()).find()) {
-			g.addKeyword(entry.getKey())
-		}
-		
-		if(Pattern.compile(Pattern.quote(entry.getKey()), Pattern.CASE_INSENSITIVE).matcher(g.getDescription()).find()) {
-			g.addKeyword(entry.getKey())
+	def ArrayList<String> s = g.getDescription().split('[ //,//.//?//!//://;??//&]')
+	def tmp
+
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			g.addKeyword(s.get(i).toLowerCase())
 		}
 	}
-	
-	for(Forum f in g.getForums()) {
-		getKeywords(f)
+
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
+		}
+	}
+
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
+		}
+	}
+
+	s = g.getName().split('[ //,//.//?//!//://;??//&]')
+
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			g.addKeyword(s.get(i).toLowerCase())
+		}
+	}
+
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
+		}
+	}
+
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
+		}
+	}
+}
+
+public void getKeywords(Forum f) {
+	def ArrayList<String> s = f.getDescription().split('[ //,//.//?//!//://;??//&]')
+	def tmp
+
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			f.addKeyword(s.get(i).toLowerCase())
+		}
+	}
+
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+
+	s = f.getTitle().split('[ //,//.//?//!//://;??//&]')
+
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			f.addKeyword(s.get(i).toLowerCase())
+		}
+	}
+
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
 	}
 }
 
@@ -101,6 +165,9 @@ public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
 	for(def i=0;i<splitString.size()-1;i++) {
 		tmp = splitString.get(i) + " " + splitString.get(i+1)
 
+		if(b) {
+			println("This is tmp X 2: " + tmp)
+		}
 		if(heuristicValues.containsKey(tmp)) {
 			score += heuristicValues.get(tmp)
 			keywordCombinations.add(tmp)
@@ -111,6 +178,9 @@ public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
 	for(def i=0;i<splitString.size()-2;i++) {
 		tmp = splitString.get(i) + " " + splitString.get(i+1) + " " + splitString.get(i+2)
 
+		if(b) {
+			println("This is tmp X3: " + tmp)
+		}
 		if(heuristicValues.containsKey(tmp)) {
 			score += heuristicValues.get(tmp)
 			keywordCombinations.add(tmp)
@@ -156,6 +226,7 @@ public void updateGroupList() {
 	def query
 	def value
 	def g
+	def score = 0
 
 	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
 		query = entry.getKey().replaceAll(" ", "%20")
@@ -358,14 +429,14 @@ public HashSet<Wirepost> getWireposts() {
 					return wireposts
 				}
 
-				println("This is GUID: " + response.result.get(i).guid)
-				
+				println("This is the GUID of the current wirepost: " + response.result.get(i).guid)
+
 				wire = new Wirepost(response.result.get(i).guid, group, new URL(response.result.get(i).url),response.result.get(i).description,response.result.get(i).title,getTimestamp(response.result.get(i).time_created))
 				wire.notifyNew()
 				wireposts.add(wire)
 
 				time = getTimestamp(response.result.get(i).time_updated)
-				
+
 				if(timestampWire > time) {
 					return wireposts
 				}
@@ -415,16 +486,19 @@ largestWirepostID = dbStatic.getLargestWirepostGUID()
 if(!dbStatic.isEmpty()) {
 	timestamp = new Date().minus(1).getTime()//Returns this time yesterday
 	timestampWire = new Date().minus(1).getTime()
+	println("24h run")
 } else {
 	timestamp = new Date(100,0,0).getTime()//Returns a time before GCCollab/GCConnex
 	timestampWire = new Date().minus(7).getTime()
+	println("First run")
 }
 
 //Temporarily removed during testing, will be added later
+println("Updating list of groups")
 updateGroupList();
 listGroups = dbStatic.getGroups() //List of all groups from the database
 
-println("Getting all forums from API")
+println("Getting all forums from GCCollab/GCConnex")
 
 def liveList = getForums() //List of all forums from the API requests
 def wireposts = getWireposts()
@@ -461,17 +535,18 @@ for(Forum f in liveList) {
 	def score = 0
 
 	getKeywords(f)
-	
+
 	if(f.getClass().equals(Wirepost.class)) {
-		for(String s in f.getDescription()) {
+		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s,heuristicValues)
 		}
 
+		getKeywords(f)
 		f.setScore(score)
 		score = 0
 	}
 
-	if(f.isNew()) {
+	if(f.isNew() && !f.getClass().equals(Wirepost.class)) {
 		for(Reply r in f.getMessages()) {
 			for(String s in getSentences(r.getMessage())) {
 				score += scoreSentence(s, heuristicValues)
@@ -489,7 +564,7 @@ for(Forum f in liveList) {
 		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s, heuristicValues)
 		}
-		
+
 		for(String s in getSentences(f.getTitle())) {
 			score += scoreSentence(s,heuristicValues)
 		}
@@ -505,13 +580,13 @@ for(Forum f in liveList) {
 			}
 
 			r.setScore(score)
-			score = 0			
+			score = 0
 		}
 
 		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s, heuristicValues)
 		}
-		
+
 		for(String s in getSentences(f.getTitle())) {
 			score += scoreSentence(s,heuristicValues)
 		}
