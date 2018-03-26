@@ -85,14 +85,14 @@ public class GCCollabDB {
 	}
 
 	public void updateForum(Forum f) {
-		def description =sanitize(f.getDescription())
+		def description = sanitize(f.getDescription())
 		def timestamp = f.getTimestamp()
 		def title = sanitize(f.getTitle())
 		def score = f.getScore()
 		def forumID = f.getID()
 		def keywords = f.getKeywords()
 		
-		dbInstance.execute("update forum set description ='"+ description +"', timestamp='"+ timestamp +"', score='"+ score +"', title='"+ title  +"' where forumID='"+ forumID +"'" + "' where keywords='" + keywords + "'")
+		dbInstance.execute("update forum set description ='"+ description +"', timestamp='"+ timestamp +"', score='" + score + "', title='" + title  + " keywords=" + keywords + "' where forumID='" + forumID + "'")
 
 		for(Reply r in f.getMessages()) {
 			if(r.hasChanged()) {
@@ -347,7 +347,7 @@ public class GCCollabDB {
 	//TODO add other reserved characters to the list of characters to be removed
 	public String sanitize(String s) {
 		if(s) {
-			return s.replaceAll("'","\'")
+			return s.replaceAll("'","\'").replaceAll('"', '\\"')
 		}
 	}
 }
