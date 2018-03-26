@@ -42,51 +42,83 @@ public ArrayList<String> getSentences(String message) {
 	return message.split('[ //,//.//?//!//://;??//&]')//Add \\; later if needed.(Message needs to be sanitized first
 }
 
+//public void getKeywords(Forum f) {	
+//	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {		
+//		
+//		println("Trying to match: " + entry.getKey() + " to:")
+//		println(f.getDescription() + " and ")
+//		println(f.getTitle())
+//					
+//		if(Pattern.compile(Pattern.quote("\\b" + entry.getKey() + "\\b"), Pattern.CASE_INSENSITIVE).matcher(f.getTitle()).find()) {
+//			
+//			println("Matched " + entry.getKey() + " with: " + f.getTitle())
+//			
+//			f.addKeyword(entry.getKey())
+//		}
+//		
+//		if(Pattern.compile(Pattern.quote("\\b" + entry.getKey() + "\\b"), Pattern.CASE_INSENSITIVE).matcher(f.getDescription()).find()) {
+//			
+//			println("Matched " + entry.getKey() + " with: " + f.getDescription())
+//			
+//			f.addKeyword(entry.getKey())
+//		}
+//		
+//		for(Reply r in f.getMessages()) {
+//			if(Pattern.compile(Pattern.quote("\\b" + entry.getKey() + "\\b"), Pattern.CASE_INSENSITIVE).matcher(r.getMessage()).find()) {
+//				
+//				println("Matched " + entry.getKey() + " with: " + r.getMessage())
+//				
+//				f.addKeyword(entry.getKey())
+//			}
+//		}
+//	}	
+//}
+//
 public void getKeywords(Group g) {
 	def ArrayList<String> s = g.getDescription().split('[ //,//.//?//!//://;??//&]')
 	def tmp
-
+	
 	for(def i=0;i<s.size();i++) {
 		if(heuristicValues.containsKey(s.get(i))) {
 			g.addKeyword(s.get(i).toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-1;i++) {
 		tmp = s.get(i) + " " + s.get(i+1)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			g.addKeyword(tmp.toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-2;i++) {
 		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			g.addKeyword(tmp.toLowerCase())
 		}
 	}
-
+	
 	s = g.getName().split('[ //,//.//?//!//://;??//&]')
-
+	
 	for(def i=0;i<s.size();i++) {
 		if(heuristicValues.containsKey(s.get(i))) {
 			g.addKeyword(s.get(i).toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-1;i++) {
 		tmp = s.get(i) + " " + s.get(i+1)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			g.addKeyword(tmp.toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-2;i++) {
 		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			g.addKeyword(tmp.toLowerCase())
 		}
@@ -96,50 +128,76 @@ public void getKeywords(Group g) {
 public void getKeywords(Forum f) {
 	def ArrayList<String> s = f.getDescription().split('[ //,//.//?//!//://;??//&]')
 	def tmp
-
+	
 	for(def i=0;i<s.size();i++) {
 		if(heuristicValues.containsKey(s.get(i))) {
 			f.addKeyword(s.get(i).toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-1;i++) {
 		tmp = s.get(i) + " " + s.get(i+1)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			f.addKeyword(tmp.toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-2;i++) {
 		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			f.addKeyword(tmp.toLowerCase())
 		}
 	}
-
+	
 	s = f.getTitle().split('[ //,//.//?//!//://;??//&]')
-
+	
 	for(def i=0;i<s.size();i++) {
 		if(heuristicValues.containsKey(s.get(i))) {
 			f.addKeyword(s.get(i).toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-1;i++) {
 		tmp = s.get(i) + " " + s.get(i+1)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			f.addKeyword(tmp.toLowerCase())
 		}
 	}
-
+	
 	for(def i=0;i<s.size()-2;i++) {
 		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
-
+	
 		if(heuristicValues.containsKey(tmp)) {
 			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+	
+	for(Reply r in f.getMessages()) {
+		s = r.getMessage.split('[ //,//.//?//!//://;??//&]')
+		
+		for(def i=0;i<s.size();i++) {
+			if(heuristicValues.containsKey(s.get(i))) {
+				f.addKeyword(s.get(i).toLowerCase())
+			}
+		}
+		
+		for(def i=0;i<s.size()-1;i++) {
+			tmp = s.get(i) + " " + s.get(i+1)
+		
+			if(heuristicValues.containsKey(tmp)) {
+				f.addKeyword(tmp.toLowerCase())
+			}
+		}
+		
+		for(def i=0;i<s.size()-2;i++) {
+			tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+		
+			if(heuristicValues.containsKey(tmp)) {
+				f.addKeyword(tmp.toLowerCase())
+			}
 		}
 	}
 }
@@ -153,6 +211,19 @@ public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
 	def tmp//Used as temporary string to find keyword combinations
 	def tmpScore// Used to calculate when two keywords combinations are found in the same sentence
 
+//	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
+//		if(Pattern.compile(Pattern.quote("\\b" + entry.getKey() + "\\b"), Pattern.CASE_INSENSITIVE).matcher(s).find()) {
+//			if(entry.getKey().split().size()>1) {
+//				keywordCombinations.add(entry.getKey())
+//				score += entry.getValue()
+//				
+//			} else {
+//				keywords.add(entry.getKey())
+//				score += entry.getValue()
+//			}
+//		}
+//	}
+	
 	//Check single words
 	for(def i=0;i<splitString.size();i++) {
 		if(heuristicValues.containsKey(splitString.get(i))) {
@@ -255,7 +326,7 @@ public void updateGroupList() {
 
 				for(def i = 0; i<response.result.size(); i++) {
 					g = new Group(response.result.get(i).guid, response.result.get(i).name, response.result.get(i).description, new URL(response.result.get(i).url));
-					getKeywords(g)
+					getKeywords(g)														
 					dbStatic.insertGroup(g);
 				}
 			} else {
@@ -430,13 +501,13 @@ public HashSet<Wirepost> getWireposts() {
 				}
 
 				println("This is the GUID of the current wirepost: " + response.result.get(i).guid)
-
+				
 				wire = new Wirepost(response.result.get(i).guid, group, new URL(response.result.get(i).url),response.result.get(i).description,response.result.get(i).title,getTimestamp(response.result.get(i).time_created))
 				wire.notifyNew()
 				wireposts.add(wire)
 
 				time = getTimestamp(response.result.get(i).time_updated)
-
+				
 				if(timestampWire > time) {
 					return wireposts
 				}
@@ -533,14 +604,14 @@ println("(Re)calculation scores for forums")
 //Calculate the score of every new forum found
 for(Forum f in liveList) {
 	def score = 0
-
+	
 	getKeywords(f)
-
+	
 	if(f.getClass().equals(Wirepost.class)) {
 		for(String s in getSentences(f.getDescription())) {
-			score += scoreSentence(s,heuristicValues)
+			score += scoreSentence(s,heuristicValues)			
 		}
-
+		
 		getKeywords(f)
 		f.setScore(score)
 		score = 0
@@ -564,7 +635,7 @@ for(Forum f in liveList) {
 		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s, heuristicValues)
 		}
-
+		
 		for(String s in getSentences(f.getTitle())) {
 			score += scoreSentence(s,heuristicValues)
 		}
@@ -580,13 +651,13 @@ for(Forum f in liveList) {
 			}
 
 			r.setScore(score)
-			score = 0
+			score = 0			
 		}
 
 		for(String s in getSentences(f.getDescription())) {
 			score += scoreSentence(s, heuristicValues)
 		}
-
+		
 		for(String s in getSentences(f.getTitle())) {
 			score += scoreSentence(s,heuristicValues)
 		}
@@ -596,7 +667,7 @@ for(Forum f in liveList) {
 	}
 }
 
-println("Updating DB")
+println("Updating DB")	
 
 //Perform updates on DB
 for (Forum f in liveList) {

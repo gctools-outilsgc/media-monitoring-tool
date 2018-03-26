@@ -15,8 +15,8 @@ heuristicValues = dbStatic.setScore()
 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))
 print("Please enter the group URL: ")
 groupURL = reader.readLine()
-def groupID = getIDfromURL(groupURL);
-println("Fetched groupID: " + groupID);
+def groupID = getIDfromURL(groupURL)
+println("Fetched groupID: " + groupID)
 
 
 Group newGroup = addNewGroup(groupID)
@@ -237,32 +237,131 @@ public void getMessages(Forum f, ArrayList<String> replies) {
 	}
 }
 
-public void getKeywords(Forum f) {
-	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
-		if(f.getDescription().contains(entry.getKey())) {
-			f.addKeyword(entry.getKey())
+public void getKeywords(Group g) {
+	def ArrayList<String> s = g.getDescription().split('[ //,//.//?//!//://;??//&]')
+	def tmp
+	
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			g.addKeyword(s.get(i).toLowerCase())
 		}
-
-		if(f.getTitle().contains(entry.getKey())) {
-			f.addKeyword(entry.getKey())
+	}
+	
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+	
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
 		}
-
-		for(Reply r in f.getMessages()) {
-			if(r.getMessage().contains(entry.getKey())) {
-				f.addKeyword(entry.getKey())
-			}
+	}
+	
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+	
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
+		}
+	}
+	
+	s = g.getName().split('[ //,//.//?//!//://;??//&]')
+	
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			g.addKeyword(s.get(i).toLowerCase())
+		}
+	}
+	
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+	
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
+		}
+	}
+	
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+	
+		if(heuristicValues.containsKey(tmp)) {
+			g.addKeyword(tmp.toLowerCase())
 		}
 	}
 }
-public void getKeywords(Group g) {
-	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
-		if(g.getName().contains(entry.getKey())) {
-			g.addKeyword(entry.getKey())
+
+public void getKeywords(Forum f) {
+	def ArrayList<String> s = f.getDescription().split('[ //,//.//?//!//://;??//&]')
+	def tmp
+	
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			f.addKeyword(s.get(i).toLowerCase())
 		}
 	}
-
-	for(Forum f in g.getForums()) {
-		getKeywords(f)
+	
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+		
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+	
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+	
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+	
+	s = f.getTitle().split('[ //,//.//?//!//://;??//&]')
+	
+	for(def i=0;i<s.size();i++) {
+		if(heuristicValues.containsKey(s.get(i))) {
+			f.addKeyword(s.get(i).toLowerCase())
+		}
+	}
+	
+	for(def i=0;i<s.size()-1;i++) {
+		tmp = s.get(i) + " " + s.get(i+1)
+	
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+	
+	for(def i=0;i<s.size()-2;i++) {
+		tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+	
+		if(heuristicValues.containsKey(tmp)) {
+			f.addKeyword(tmp.toLowerCase())
+		}
+	}
+	
+	for(Reply r in f.getMessages()) {
+		s = r.getMessage().split('[ //,//.//?//!//://;??//&]')
+		
+		for(def i=0;i<s.size();i++) {
+			if(heuristicValues.containsKey(s.get(i))) {
+				f.addKeyword(s.get(i).toLowerCase())
+			}
+		}
+		
+		for(def i=0;i<s.size()-1;i++) {
+			tmp = s.get(i) + " " + s.get(i+1)
+		
+			if(heuristicValues.containsKey(tmp)) {
+				f.addKeyword(tmp.toLowerCase())
+			}
+		}
+		
+		for(def i=0;i<s.size()-2;i++) {
+			tmp = s.get(i) + " " + s.get(i+1) + " " + s.get(i+2)
+		
+			if(heuristicValues.containsKey(tmp)) {
+				f.addKeyword(tmp.toLowerCase())
+			}
+		}
 	}
 }
 
@@ -273,75 +372,79 @@ public ArrayList<String> getSentences(String message) {
 			message = ""
 		}
 
-		return message.split('[\\.\\?\\!]')//Add \\; later if needed.(Message needs to be sanitized first
+		return message.split('[\\.\\?\\!]')
 	}
 
 
-	//Scores a sentence based on heuristic values
-	public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
-		def score = 0
-		def ArrayList<String> splitString = s.split(" +")//Split the string into words
-		def ArrayList<String> keywordCombinations = new ArrayList<String>()//Keep track of every instance of a keyword combination found
-		def ArrayList<String> keywords = new ArrayList<String>()//Keep track of every instance of a keyword found
-		def tmp//Used as temporary string to find keyword combinations
-		def tmpScore// Used to calculate when two keywords combinations are found in the same sentence
+//Scores a sentence based on heuristic values
+public int scoreSentence(String s, TreeMap<String,Integer> heuristicValues) {
+	def score = 0
+	def ArrayList<String> splitString = s.split(" +")//Split the string into words
+	def ArrayList<String> keywordCombinations = new ArrayList<String>()//Keep track of every instance of a keyword combination found
+	def ArrayList<String> keywords = new ArrayList<String>()//Keep track of every instance of a keyword found
+	def tmp//Used as temporary string to find keyword combinations
+	def tmpScore// Used to calculate when two keywords combinations are found in the same sentence
 
-		//Check single words
-		for(def i=0;i<splitString.size();i++) {
-			if(heuristicValues.containsKey(splitString.get(i))) {
-				score += heuristicValues.get(splitString.get(i))
-				keywords.add(splitString.get(i))
-			}
+	//Check single words
+	for(def i=0;i<splitString.size();i++) {
+		if(heuristicValues.containsKey(splitString.get(i))) {
+			score += heuristicValues.get(splitString.get(i))
+			keywords.add(splitString.get(i))
 		}
-
-		//Check two words together
-		for(def i=0;i<splitString.size()-1;i++) {
-			tmp = splitString.get(i) + " " + splitString.get(i+1)
-
-			if(heuristicValues.containsKey(tmp)) {
-				score += heuristicValues.get(tmp)
-				keywordCombinations.add(tmp)
-			}
-		}
-
-		//Check for three words together
-		for(def i=0;i<splitString.size()-2;i++) {
-			tmp = splitString.get(i) + " " + splitString.get(i+1) + " " + splitString.get(i+2)
-
-			if(heuristicValues.containsKey(tmp)) {
-				score += heuristicValues.get(tmp)
-				keywordCombinations.add(tmp)
-			}
-		}
-
-		//Multiply keywords and keyword combination values
-		for(k in keywords) {
-			for(c in keywordCombinations) {
-				score += heuristicValues.get(k) * heuristicValues.get(c)
-			}
-		}
-
-		//Add multiplied values of combined values for keyword combination
-		for(def i=0;i<keywordCombinations.size()-1;i++) {
-			for(def j = i+1;j<keywordCombinations.size();j++) {
-				tmpScore = (heuristicValues.get(keywordCombinations.get(i)) + heuristicValues.get(keywordCombinations.get(j)))
-				score += tmpScore * tmpScore
-			}
-		}
-		return score
 	}
+
+	//Check two words together
+	for(def i=0;i<splitString.size()-1;i++) {
+		tmp = splitString.get(i) + " " + splitString.get(i+1)
+
+		if(heuristicValues.containsKey(tmp)) {
+			score += heuristicValues.get(tmp)
+			keywordCombinations.add(tmp)
+		}
+	}
+
+	//Check for three words together
+	for(def i=0;i<splitString.size()-2;i++) {
+		tmp = splitString.get(i) + " " + splitString.get(i+1) + " " + splitString.get(i+2)
+
+		if(heuristicValues.containsKey(tmp)) {
+			score += heuristicValues.get(tmp)
+			keywordCombinations.add(tmp)
+		}
+	}
+
+	//Multiply keywords and keyword combination values
+	for(k in keywords) {
+		for(c in keywordCombinations) {
+			score += heuristicValues.get(k) * heuristicValues.get(c)
+		}
+	}
+
+	//Add multiplied values of combined values for keyword combination
+	for(def i=0;i<keywordCombinations.size()-1;i++) {
+		for(def j = i+1;j<keywordCombinations.size();j++) {
+			tmpScore = (heuristicValues.get(keywordCombinations.get(i)) + heuristicValues.get(keywordCombinations.get(j)))
+			score += tmpScore * tmpScore
+		}
+	}
+	return score
+}
 
 public String getIDfromURL(String url) {
-	//https://gccollab.ca/groups/profile/6161/gccollab-jobs-marketplace-carrefour-demploi-gccollab-carrefour-demploi-gccollab-gccollab-jobs-marketplace
-	String a = "gccollab.ca/groups/profile/";
-	int index = url.lastIndexOf(a);
+	String a = "gccollab.ca/groups/profile/"
+	int index = url.lastIndexOf(a)
+	
 	if (index == -1) {
-		return null;
+		return null
 	}
-	int adjustedIndex = index + a.length();
+	
+	int adjustedIndex = index + a.length()
+	
 	if (adjustedIndex >= url.length()) {
-		return null;
+		return null
  	}
-	String sub = url.substring(adjustedIndex);
-	return sub.substring(0, sub.indexOf("/"));
+	 
+	String sub = url.substring(adjustedIndex)
+	
+	return sub.substring(0, sub.indexOf("/"))
 }
