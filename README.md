@@ -4,31 +4,21 @@ Media monitoring application for use with GCconnex and GCcollab
 
 **Work In Progress - This is not a final product**
 
-Project is written in groovy using Eclipse
-
-In file UserInfo.txt [EMAIL] needs to be replaced with the email used to connect to GCCollab and [PASSWORD] Needs to be replaced with your GCCollab password, without the brackets.
-
-In order to run the script you will need to import a couple jar files to the project
-
-- Jsoup version 1.10.3 or older at [JSoup](https://jsoup.org/download)
-
-- sqlite-jdbc version 3.21.0 or older [SQLite-JDBC](https://bitbucket.org/xerial/sqlite-jdbc/downloads/)
-
 ## How to run the script for GCcollab
 
-- The database given has four empty tables
+- Follow the installation instruction [here](INSTALL.md)
 
-  - The groups table holds a list of all groups that are being monitored. The list is determined by querying GCCollab/GCConnex for groups with descriptions or titles that match keywords with high likelihood of mentioning topics to the related subject which is being monitored
+- Modify the userinfo.txt file. Since permission to the platform is based on your account, your account information will need to be supplied in this file. Replace [EMAIL] with the email you used to register for GCCollab. Replace [PASSWORD] with the password to your account. If a group is closed, you will not be able to monitor it without first being accepted in the group.
 
-    - Groups can be entered manually. Importing a group manually will generate a new report based on information in the group from the groups creation, each following time the script runs only the last 24h will be checked **(NOT YET IMPLEMENTED)**
+- If you know specific groups you wish to monitor, groups can be added manually by running the addGroupScript.groovy and give each groups URL when requested. An initial report will be generated containing all information about the group.
 
-  - The forums table (Discussions, Blogs, Events...) and the messages table holds data on items from groups which have already been monitored
+- If you wish to find groups to monitor, input keywords into the heuristicValues table by running the addKeywordScript.groovy and supply a keyword and a value. Any value greater than 10 will be used to look for new groups. **(NOT YET IMPLEMENTED)** An initial report will be generated for each group which was found using the new keyword similar to the report generated when adding groups manually
 
-  - The heuristicValues table holds all the keyword and values which are used in scoring how relevant a forum is and finding new groups to monitor. User's have to input each keyword(name) and value(value) in the table for the script to run **(Not yet implemented can be done using any SQLite client)**
+  - For now keywords and values can be added with any SQLite client of your choice
 
-Once an initial set of heuristic values is entered in the database and the changes to UserInfo.txt have been made the script can run. The script will only check for new or modified information from the last 24 hours.
+- Once an initial set of heuristic values is entered in the database and the changes to userinfo.txt have been made the monitor script can run. The script is designed to look for any new information within the last 24h (Last week if the Groups table is empty). It is recommended that the script be scheduled to run every 24h
 
-## How to run the script for GCconnex
+## How to run the script for GCConnex
 
 - Follow the instructions in the "How to run the script for GCCollab" section
 
@@ -36,10 +26,20 @@ Once an initial set of heuristic values is entered in the database and the chang
 
 - Additionally the script must run on a host machine connected to an internal GC network
 
-- The script hasn't been tested on GCConnex, only on GCCollab. Both systems are nearly identical and share the same APIs. The script should work without anything modifications.
+- The script hasn't been tested on GCConnex, only on GCCollab. Both systems are nearly identical and share the same APIs. The script should work without any other modifications.
+
+## Configuration
+
+  - The heuristic values given to keyword are unique for each script and users will need to supply values that make sense for topics they wish to monitor.
+
+  -  Keywords can contain as many words as possible, but unsafe SQL or URL characters should be avoided
+
+  - The current threshold for keywords that are used to find new groups is 10 which should given to keywords which have a reasonably high likelihood of being used in discussions about the topic in question
 
 ## TODO List
 
-- Improvements on how the script determines the likelihood a group is should be monitored is a work in progress
+- Add script to add keywords to the database
 
-- Improve how a forum/group/message is determined to be relevant. Currently a number is given based on keywords and how many times they are seen in a sentence and if they are seen with other keywords in the same sentence (See scoreSentence() function in Monitor.groovy). The higher the number the more likely the item in question is relevant to the topic being monitored.
+- Find more unsafe characters to the list of characters that need to be sanitized for the database or the URL used in the POST request.
+
+- For technical reasons, the script isn't guaranteed to work properly with groups which have discussions, events or blogs which are only in French. The script currently on supports English content.  
