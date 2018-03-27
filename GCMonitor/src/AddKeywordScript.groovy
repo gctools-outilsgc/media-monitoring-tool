@@ -1,32 +1,102 @@
+import groovy.json.JsonSlurper
 import java.io.BufferedReader
 import java.util.ArrayList
 import java.util.TreeMap
 import java.text.SimpleDateFormat
-
-import groovy.json.JsonSlurper
-
 /*--------------------------------------SCRIPT-----------------------------------------------*/
 
-def groupURL
+def keyword;
+def value;
+
 userInfo = getUserInfo() //Global variable holding user info
 dbStatic = new GCCollabDB("gc.db") //Database
 heuristicValues = dbStatic.setScore()
 
 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))
-print("Please enter the group URL: ")
-groupURL = reader.readLine()
-def groupID = getIDfromURL(groupURL);
-println("Fetched groupID: " + groupID);
-Group newGroup = addNewGroup(groupID);
-saveGroup(newGroup);
+print("Please enter the Key word: ");
+keyword = reader.readLine();
+print("Please enter the Key word's heuristic value: ");
+value = reader.readLine();
+while(!value.isInteger()) {
+	print("Please enter a valid group ID: ")
+	value = reader.readLine()
+}
+value = Integer.parseInt(value);
 
+if (dbStatic.hasKey(keyword)) {
+	println("This key word already exists in the database.");
+	System.exit(0)
+}
 
-
+dbStatic.addHeusticKey(keyword, value);
+println("New keyword '" + keyword + "' has been added to the database!" )
+addKeywordGroups(keyword);
+println("All groups having the keyword '" + keyword + "'have been added!")
 //Closing the databases
 dbStatic.close()
 
 
 /*--------------------------------------FUNCTIONS-----------------------------------------------*/
+
+
+public void addKeywordGroups(String keyword) {
+	def parser = new JsonSlurper()
+	def post
+	def postRC
+	def responseString
+	def response
+	def url
+	def value
+	
+	def query = keyword.replaceAll(" ", "%20").replaceAll("/", "%2F").replaceAll("'", "%2C")
+
+		
+	try {
+	url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query)
+	println("URL: " + url)
+	post = url.openConnection()
+	post.requestMethod = 'POST'
+	post.setDoOutput(true)
+	postRC = post.getResponseCode()
+	} catch(java.net.ConnectException e) {
+		println("Connection timeout detected, if this problem persist try again with a different connection")
+		url = new URL("https://gccollab.ca/services/api/rest/json/?method=query.posts&user=" + userInfo.getUser() + "&password=" + userInfo.getPassword() + "&object=group&query=" + query)
+		post = url.openConnection()
+		post.requestMethod = 'POST'
+		post.setDoOutput(true)
+		postRC = post.getResponseCode()
+	}
+	
+	if (postRC == 200) {
+		responseString = post.getInputStream().getText()
+		response = parser.parseText(responseString)
+		println(response)
+		for (int i = 0; i < response.result.size(); i++) {
+			def g = addNewGroup(response.result.get(i).guid.toString());
+			saveGroup(g)
+		}
+	} else {
+			println("This is error code: " + postRC)
+	}
+}
+
+
+
+//Build user information from file
+public UserInfo getUserInfo() {
+	def br = new BufferedReader(new FileReader("userInfo.txt"))
+	
+	def line = br.readLine()
+
+	String[] tokenize = line.split(",")
+	def user = new UserInfo(tokenize[0],tokenize[1])
+	
+	br.close()
+
+	return user
+}
+
+
 
 public Group addNewGroup(String groupID) {
 	
@@ -59,7 +129,7 @@ public Group addNewGroup(String groupID) {
 	if (postRC == 200) {
 		responseString = post.getInputStream().getText()
 		response = parser.parseText(responseString)
-		println(response)			
+		println(response)
 		if (response.result.size() > 0) {
 			g = new Group(response.result.get(0).guid, response.result.get(0).name, response.result.get(0).description, new URL(response.result.get(0).url))
 		} else {
@@ -119,21 +189,19 @@ public void saveGroup(Group newGroup) {
 }
 
 
-
-//Build user information from file
-public UserInfo getUserInfo() {
-	def br = new BufferedReader(new FileReader("userInfo.txt"))
+public void getKeywords(Group g) {
+	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
+		println("Looking at keyword: " + entry.getKey() + " inside groups")
+		
+		if(g.getName().contains(entry.getKey())) {
+			g.addKeyword(entry.getKey())
+		}
+	}
 	
-	def line = br.readLine()
-
-	String[] tokenize = line.split(",")
-	def user = new UserInfo(tokenize[0],tokenize[1])
-	
-	br.close()
-
-	return user
+	for(Forum f in g.getForums()) {
+		getKeywords(f)
+	}
 }
-
 
 
 //get Forums from a specific Group
@@ -234,7 +302,6 @@ public long getTimestamp(String s) {
 }
 
 
-
 public void getMessages(Forum f, ArrayList<String> replies) {
 	def reply
 	
@@ -265,19 +332,8 @@ public void getKeywords(Forum f) {
 		}
 	}
 }
-public void getKeywords(Group g) {
-	for(Map.Entry<String,Integer> entry : heuristicValues.entrySet()) {
-		println("Looking at keyword: " + entry.getKey() + " inside groups")
-		
-		if(g.getName().contains(entry.getKey())) {
-			g.addKeyword(entry.getKey())
-		}
-	}
-	
-	for(Forum f in g.getForums()) {
-		getKeywords(f)
-	}
-}
+
+
 
 public ArrayList<String> getSentences(String message) {
 	
@@ -344,22 +400,5 @@ public ArrayList<String> getSentences(String message) {
 		return score
 }
 
-
-public String getIDfromURL(String url) {
-	//https://gccollab.ca/groups/profile/6161/gccollab-jobs-marketplace-carrefour-demploi-gccollab-carrefour-demploi-gccollab-gccollab-jobs-marketplace
-	String a = "gccollab.ca/groups/profile/";
-	int index = url.lastIndexOf(a);
-	if (index == -1) {
-		return null;
-	}
-	int adjustedIndex = index + a.length();
-	if (adjustedIndex >= url.length()) {
-		return null;
-	}
-	String sub = url.substring(adjustedIndex);
-	return sub.substring(0, sub.indexOf("/"));
-}
-	
-	
 
 
